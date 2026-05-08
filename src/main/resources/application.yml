@@ -12,7 +12,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update          # Cuando se incorpore Flyway, cambiar a 'validate'
+      ddl-auto: validate          # Flyway gestiona el esquema; Hibernate solo valida
     show-sql: false
     properties:
       hibernate:
@@ -21,6 +21,12 @@ spring:
         jdbc:
           time_zone: America/Lima
     open-in-view: false
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: false
+    locations: classpath:db/migration
+    clean-disabled: true                # En prod NUNCA se ejecuta flyway:clean
 
   jackson:
     serialization:
