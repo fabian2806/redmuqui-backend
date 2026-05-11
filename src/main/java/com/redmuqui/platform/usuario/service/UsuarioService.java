@@ -3,7 +3,6 @@ package com.redmuqui.platform.usuario.service;
 import com.redmuqui.platform.common.exception.DuplicateResourceException;
 import com.redmuqui.platform.common.exception.ResourceNotFoundException;
 import com.redmuqui.platform.institucion.repository.InstitucionRepository;
-import com.redmuqui.platform.macroregion.repository.MacroregionRepository;
 import com.redmuqui.platform.rol.repository.RolRepository;
 import com.redmuqui.platform.usuario.dto.UsuarioCreateDTO;
 import com.redmuqui.platform.usuario.dto.UsuarioResponseDTO;
@@ -24,7 +23,6 @@ public class UsuarioService {
 
     private final UsuarioRepository usuarioRepository;
     private final RolRepository rolRepository;
-    private final MacroregionRepository macroregionRepository;
     private final InstitucionRepository institucionRepository;
     private final PasswordEncoder passwordEncoder;
     private final UsuarioMapper mapper;
@@ -56,16 +54,13 @@ public class UsuarioService {
             .nombres(dto.nombres())
             .apellidos(dto.apellidos())
             .email(dto.email())
+            .telefono(dto.telefono())
             .contrasenhaHash(passwordEncoder.encode(dto.contrasenha()))
             .estado(true)
             .rol(rolRepository.findById(dto.idRol())
                 .orElseThrow(() -> new ResourceNotFoundException("Rol", dto.idRol())))
             .build();
 
-        if (dto.idMacroregion() != null) {
-            usuario.setMacroregion(macroregionRepository.findById(dto.idMacroregion())
-                .orElseThrow(() -> new ResourceNotFoundException("Macroregion", dto.idMacroregion())));
-        }
         if (dto.idInstitucion() != null) {
             usuario.setInstitucion(institucionRepository.findById(dto.idInstitucion())
                 .orElseThrow(() -> new ResourceNotFoundException("Institucion", dto.idInstitucion())));
@@ -87,13 +82,9 @@ public class UsuarioService {
         usuario.setNombres(dto.nombres());
         usuario.setApellidos(dto.apellidos());
         usuario.setEmail(dto.email());
+        usuario.setTelefono(dto.telefono());
         usuario.setRol(rolRepository.findById(dto.idRol())
             .orElseThrow(() -> new ResourceNotFoundException("Rol", dto.idRol())));
-
-        usuario.setMacroregion(dto.idMacroregion() != null
-            ? macroregionRepository.findById(dto.idMacroregion())
-                .orElseThrow(() -> new ResourceNotFoundException("Macroregion", dto.idMacroregion()))
-            : null);
 
         usuario.setInstitucion(dto.idInstitucion() != null
             ? institucionRepository.findById(dto.idInstitucion())

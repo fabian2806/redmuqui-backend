@@ -7,11 +7,10 @@ public record UsuarioResponseDTO(
     String nombres,
     String apellidos,
     String email,
+    String telefono,
     Boolean estado,
     String nombreRol,
     Long idRol,
-    String nombreMacroregion,
-    Long idMacroregion,
     String nombreInstitucion,
     Long idInstitucion,
     LocalDateTime ultimoAcceso
