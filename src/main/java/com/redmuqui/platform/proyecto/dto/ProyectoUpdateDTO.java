@@ -19,6 +19,7 @@ public record ProyectoUpdateDTO(
     Double porcentajeAvance,
     Double presupuesto,
     Long idMacroregion,
+    Set<Long> idMacroregiones,
     Long idEjeTematico,
     Long idResponsablePrincipal,
     Set<Long> idTerritorios

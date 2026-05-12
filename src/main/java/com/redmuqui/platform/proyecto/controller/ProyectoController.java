@@ -5,6 +5,7 @@ import com.redmuqui.platform.proyecto.dto.EquipoMemberDTO;
 import com.redmuqui.platform.proyecto.dto.ProyectoCreateDTO;
 import com.redmuqui.platform.proyecto.dto.ProyectoResponseDTO;
 import com.redmuqui.platform.proyecto.dto.ProyectoUpdateDTO;
+import com.redmuqui.platform.proyecto.entity.EstadoProyecto;
 import com.redmuqui.platform.proyecto.service.ProyectoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -27,9 +28,17 @@ public class ProyectoController {
     private final ProyectoService service;
 
     @GetMapping
-    @Operation(summary = "Listar proyectos paginados (RF-022)")
-    public ResponseEntity<PageResponse<ProyectoResponseDTO>> listar(Pageable pageable) {
-        return ResponseEntity.ok(PageResponse.from(service.listar(pageable)));
+    @Operation(summary = "Listar proyectos paginados con filtros bÃ¡sicos (RF-022)")
+    public ResponseEntity<PageResponse<ProyectoResponseDTO>> listar(
+        @RequestParam(required = false) String q,
+        @RequestParam(required = false) EstadoProyecto estado,
+        @RequestParam(required = false) Long idMacroregion,
+        @RequestParam(required = false) Long idEjeTematico,
+        Pageable pageable
+    ) {
+        return ResponseEntity.ok(PageResponse.from(
+            service.listar(q, estado, idMacroregion, idEjeTematico, pageable)
+        ));
     }
 
     @GetMapping("/{id}")

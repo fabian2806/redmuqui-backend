@@ -60,9 +60,14 @@ public class Proyecto extends Auditable {
 
     private Double presupuesto;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_macroregion")
-    private Macroregion macroregion;
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "proyecto_macroregion",
+        joinColumns = @JoinColumn(name = "id_proyecto"),
+        inverseJoinColumns = @JoinColumn(name = "id_macroregion")
+    )
+    @Builder.Default
+    private Set<Macroregion> macroregiones = new HashSet<>();
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_eje_tematico")
