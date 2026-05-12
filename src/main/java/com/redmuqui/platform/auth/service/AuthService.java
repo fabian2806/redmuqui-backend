@@ -13,6 +13,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,6 +36,7 @@ public class AuthService {
     private final UserDetailsService userDetailsService;
     private final JwtService jwtService;
     private final UsuarioRepository usuarioRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Transactional
     public TokenResponse login(LoginRequest request) {
@@ -89,17 +91,42 @@ public class AuthService {
     }
 
     public void requestRecovery(String email) {
-        // TODO: Generar token de recuperación, persistirlo y enviarlo por correo.
-        // Decisión pendiente: integración con servicio de correo (SMTP, SendGrid, etc.).
+        // Generar token JWT de reseteo de contraseña
         Usuario usuario = usuarioRepository.findByEmailIgnoreCase(email).orElse(null);
         if (usuario != null) {
-            log.info("Solicitud de recuperación para {}: pendiente de implementación", email);
+            String resetToken = jwtService.generatePasswordResetToken(email);
+            // TODO: Enviar por correo el enlace de reseteo
+            // Por ahora, loguear el enlace para desarrollo/testing
+            log.info("Token de reseteo generado para {}: {}", email, resetToken);
+            log.info("Enlace de reseteo (placeholder): https://app.redmuqui.com/reset-password?token={}", resetToken);
         }
         // No revelar si el correo existe o no (best practice de seguridad).
     }
 
+    @Transactional
     public void resetPassword(String token, String nuevaContrasenha) {
-        // TODO: Validar token de recuperación contra BD y actualizar contraseña.
-        throw new UnsupportedOperationException("Pendiente: implementar reseteo de contraseña con token");
+        try {
+            // Validar token JWT de reseteo
+            String email = jwtService.validatePasswordResetToken(token);
+
+            // Buscar usuario
+            Usuario usuario = usuarioRepository.findByEmailIgnoreCase(email)
+                .orElseThrow(() -> new BusinessException("Usuario no encontrado"));
+
+            // Hashear nueva contraseña
+            String hashedPassword = passwordEncoder.encode(nuevaContrasenha);
+
+            // Actualizar contraseña
+            usuario.setContrasenhaHash(hashedPassword);
+            usuarioRepository.save(usuario);
+
+            log.info("Contraseña reseteada exitosamente para usuario: {}", email);
+
+        } catch (IllegalArgumentException ex) {
+            throw new BusinessException("Token de reseteo inválido o expirado", ex);
+        } catch (Exception ex) {
+            log.error("Error al resetear contraseña", ex);
+            throw new BusinessException("Error interno al procesar el reseteo de contraseña", ex);
+        }
     }
 }

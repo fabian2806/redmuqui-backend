@@ -33,6 +33,9 @@ public class JwtService {
     @Value("${app.jwt.refresh-token-expiration-ms}")
     private long refreshTokenExpirationMs;
 
+    @Value("${app.jwt.reset-token-expiration-ms}")
+    private long resetTokenExpirationMs;
+
     @Value("${app.jwt.issuer}")
     private String issuer;
 
@@ -48,6 +51,12 @@ public class JwtService {
         return buildToken(claims, userDetails.getUsername(), refreshTokenExpirationMs);
     }
 
+    public String generatePasswordResetToken(String email) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("type", "password_reset");
+        return buildToken(claims, email, resetTokenExpirationMs);
+    }
+
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
     }
@@ -59,6 +68,20 @@ public class JwtService {
 
     public boolean isRefreshToken(String token) {
         return "refresh".equals(extractClaim(token, c -> c.get("type", String.class)));
+    }
+
+    public boolean isPasswordResetToken(String token) {
+        return "password_reset".equals(extractClaim(token, c -> c.get("type", String.class)));
+    }
+
+    public String validatePasswordResetToken(String token) {
+        if (!isPasswordResetToken(token)) {
+            throw new IllegalArgumentException("Token no es de tipo password reset");
+        }
+        if (isTokenExpired(token)) {
+            throw new IllegalArgumentException("Token de reseteo expirado");
+        }
+        return extractUsername(token);
     }
 
     public long getAccessTokenExpirationMs() {
