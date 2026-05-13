@@ -1,48 +1,27 @@
 package com.redmuqui.platform.territorio.controller;
 
-import com.redmuqui.platform.territorio.dto.TerritorioDTO;
+import com.redmuqui.platform.common.catalog.controller.BaseCatalogoController;
+import com.redmuqui.platform.territorio.dto.TerritorioResponseDTO;
 import com.redmuqui.platform.territorio.service.TerritorioService;
+import com.redmuqui.platform.territorio.service.TerritorioServiceImpl;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
-
-import java.net.URI;
-import java.util.List;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/territorios")
-@RequiredArgsConstructor
 @Tag(name = "Territorios", description = "Catálogo de territorios")
-public class TerritorioController {
+public class TerritorioController extends BaseCatalogoController<TerritorioResponseDTO> {
 
     private final TerritorioService service;
 
-    @GetMapping
-    public ResponseEntity<List<TerritorioDTO>> listar() { return ResponseEntity.ok(service.listar()); }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<TerritorioDTO> obtener(@PathVariable Long id) { return ResponseEntity.ok(service.obtener(id)); }
-
-    @PostMapping
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
-    public ResponseEntity<TerritorioDTO> crear(@Valid @RequestBody TerritorioDTO dto) {
-        TerritorioDTO creado = service.crear(dto);
-        return ResponseEntity.created(URI.create("/api/v1/territorios/" + creado.id())).body(creado);
+    public TerritorioController(TerritorioServiceImpl service) {
+        super(service);
+        this.service = service;
     }
 
-    @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
-    public ResponseEntity<TerritorioDTO> actualizar(@PathVariable Long id, @Valid @RequestBody TerritorioDTO dto) {
-        return ResponseEntity.ok(service.actualizar(id, dto));
-    }
-
-    @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
-    public ResponseEntity<Void> eliminar(@PathVariable Long id) {
-        service.eliminar(id);
-        return ResponseEntity.noContent().build();
+    @Override
+    protected String getRutaBase() {
+        return "/api/v1/territorios";
     }
 }
