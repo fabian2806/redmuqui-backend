@@ -2,7 +2,6 @@ package com.redmuqui.platform.usuario.entity;
 
 import com.redmuqui.platform.common.audit.Auditable;
 import com.redmuqui.platform.institucion.entity.Institucion;
-import com.redmuqui.platform.macroregion.entity.Macroregion;
 import com.redmuqui.platform.rol.entity.Rol;
 import jakarta.persistence.*;
 import lombok.*;
@@ -31,6 +30,9 @@ public class Usuario extends Auditable {
     @Column(nullable = false, unique = true, length = 150)
     private String email;
 
+    @Column(length = 30)
+    private String telefono;
+
     @Column(name = "contrasenha_hash", nullable = false)
     private String contrasenhaHash;
 
@@ -41,10 +43,6 @@ public class Usuario extends Auditable {
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "id_rol", nullable = false)
     private Rol rol;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_macroregion")
-    private Macroregion macroregion;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_institucion")
