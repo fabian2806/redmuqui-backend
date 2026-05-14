@@ -20,10 +20,12 @@ public record ProyectoResponseDTO(
     Double presupuesto,
     String nombreMacroregion,
     Long idMacroregion,
+    Set<MacroregionRefDTO> macroregiones,
     String nombreEjeTematico,
     Long idEjeTematico,
     UsuarioSummaryDTO responsablePrincipal,
     Set<TerritorioRefDTO> territorios
 ) {
+    public record MacroregionRefDTO(Long id, String nombre) {}
     public record TerritorioRefDTO(Long id, String nombre) {}
 }

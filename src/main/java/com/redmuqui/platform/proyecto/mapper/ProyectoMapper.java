@@ -6,12 +6,20 @@ import com.redmuqui.platform.proyecto.entity.Proyecto;
 import com.redmuqui.platform.usuario.dto.UsuarioSummaryDTO;
 import org.springframework.stereotype.Component;
 
+import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.stream.Collectors;
 
 @Component
 public class ProyectoMapper {
 
     public ProyectoResponseDTO toResponseDTO(Proyecto p) {
+        var macroregiones = p.getMacroregiones().stream()
+            .sorted(Comparator.comparing(m -> m.getId()))
+            .map(m -> new ProyectoResponseDTO.MacroregionRefDTO(m.getId(), m.getNombre()))
+            .collect(Collectors.toCollection(LinkedHashSet::new));
+        var macroregionPrincipal = macroregiones.stream().findFirst().orElse(null);
+
         return new ProyectoResponseDTO(
             p.getId(),
             p.getNombre(),
@@ -24,8 +32,9 @@ public class ProyectoMapper {
             p.getNivelPrioridad(),
             p.getPorcentajeAvance(),
             p.getPresupuesto(),
-            p.getMacroregion() != null ? p.getMacroregion().getNombre() : null,
-            p.getMacroregion() != null ? p.getMacroregion().getId() : null,
+            macroregionPrincipal != null ? macroregionPrincipal.nombre() : null,
+            macroregionPrincipal != null ? macroregionPrincipal.id() : null,
+            macroregiones,
             p.getEjeTematico() != null ? p.getEjeTematico().getNombre() : null,
             p.getEjeTematico() != null ? p.getEjeTematico().getId() : null,
             p.getResponsablePrincipal() != null

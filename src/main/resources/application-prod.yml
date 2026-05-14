@@ -13,6 +13,7 @@ spring:
 app:
   security:
     enabled: true
+    method-enabled: true
 
 logging:
   level:

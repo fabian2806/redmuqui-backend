@@ -45,6 +45,7 @@ app:
     secret: ${JWT_SECRET:cambiar-este-secreto-en-produccion-debe-ser-largo-y-aleatorio-min-256-bits-AAAAAA}
     access-token-expiration-ms: 900000        # 15 minutos
     refresh-token-expiration-ms: 604800000    # 7 días
+    reset-token-expiration-ms: 900000         # 15 minutos
     issuer: redmuqui-platform
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}

@@ -14,11 +14,10 @@ public class UsuarioMapper {
             u.getNombres(),
             u.getApellidos(),
             u.getEmail(),
+            u.getTelefono(),
             u.getEstado(),
             u.getRol() != null ? u.getRol().getNombre() : null,
             u.getRol() != null ? u.getRol().getId() : null,
-            u.getMacroregion() != null ? u.getMacroregion().getNombre() : null,
-            u.getMacroregion() != null ? u.getMacroregion().getId() : null,
             u.getInstitucion() != null ? u.getInstitucion().getNombre() : null,
             u.getInstitucion() != null ? u.getInstitucion().getId() : null,
             u.getUltimoAcceso()
