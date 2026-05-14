@@ -1,10 +1,10 @@
-package com.redmuqui.platform.territorio.dto;
+package com.redmuqui.platform.institucion.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
-public record TerritorioDTO(
-    Long id,
+public record InstitucionCreateDTO(
     @NotBlank @Size(max = 200) String nombre,
-    String descripcion
+    String descripcion,
+    @Size(max = 100) String tipo
 ) {}

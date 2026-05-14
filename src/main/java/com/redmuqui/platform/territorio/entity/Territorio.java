@@ -1,25 +1,16 @@
 package com.redmuqui.platform.territorio.entity;
 
-import com.redmuqui.platform.common.audit.Auditable;
-import jakarta.persistence.*;
-import lombok.*;
+import com.redmuqui.platform.common.catalog.entity.BaseCatalogo;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
 @Table(name = "territorios")
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
-public class Territorio extends Auditable {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @Column(nullable = false, length = 200)
-    private String nombre;
-
-    @Column(columnDefinition = "TEXT")
-    private String descripcion;
+public class Territorio extends BaseCatalogo {
 }
