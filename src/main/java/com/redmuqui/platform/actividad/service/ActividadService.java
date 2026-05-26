@@ -2,6 +2,7 @@ package com.redmuqui.platform.actividad.service;
 
 import com.redmuqui.platform.actividad.dto.ActividadCreateDTO;
 import com.redmuqui.platform.actividad.dto.ActividadResponseDTO;
+import com.redmuqui.platform.actividad.dto.ActividadUpdateDTO;
 import com.redmuqui.platform.actividad.entity.Actividad;
 import com.redmuqui.platform.actividad.entity.EstadoActividad;
 import com.redmuqui.platform.actividad.repository.ActividadRepository;
@@ -26,7 +27,10 @@ public class ActividadService {
     private final UsuarioRepository usuarioRepository;
 
     @Transactional(readOnly = true)
-    public Page<ActividadResponseDTO> listar(Pageable pageable) {
+    public Page<ActividadResponseDTO> listar(Long proyectoId, Pageable pageable) {
+        if (proyectoId != null) {
+            return actividadRepository.findByProyectoId(proyectoId, pageable).map(this::toDTO);
+        }
         return actividadRepository.findAll(pageable).map(this::toDTO);
     }
 
@@ -52,6 +56,25 @@ public class ActividadService {
         }
 
         return toDTO(actividadRepository.save(actividad));
+    }
+
+    @Transactional
+    public ActividadResponseDTO actualizar(Long id, ActividadUpdateDTO dto) {
+        Actividad a = buscarOFallar(id);
+
+        a.setNombre(dto.nombre());
+        a.setDescripcion(dto.descripcion());
+        a.setFechaInicio(dto.fechaInicio());
+        a.setFechaFin(dto.fechaFin());
+        if (dto.estado() != null) a.setEstado(dto.estado());
+        a.setProyecto(proyectoRepository.findById(dto.idProyecto())
+            .orElseThrow(() -> new ResourceNotFoundException("Proyecto", dto.idProyecto())));
+
+        if (dto.idResponsables() != null) {
+            a.setResponsables(new HashSet<>(usuarioRepository.findAllById(dto.idResponsables())));
+        }
+
+        return toDTO(actividadRepository.save(a));
     }
 
     @Transactional

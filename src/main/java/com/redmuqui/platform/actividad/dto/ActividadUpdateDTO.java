@@ -7,12 +7,12 @@ import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
 import java.util.Set;
 
-public record ActividadCreateDTO(
+public record ActividadUpdateDTO(
     @NotBlank String nombre,
     String descripcion,
     LocalDate fechaInicio,
     LocalDate fechaFin,
-        EstadoActividad estado,
-        @NotNull Long idProyecto,
+    EstadoActividad estado,
+    @NotNull Long idProyecto,
     Set<Long> idResponsables
 ) {}
