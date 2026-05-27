@@ -7,6 +7,8 @@ import com.redmuqui.platform.proyecto.dto.ProyectoResponseDTO;
 import com.redmuqui.platform.proyecto.dto.ProyectoUpdateDTO;
 import com.redmuqui.platform.proyecto.entity.EstadoProyecto;
 import com.redmuqui.platform.proyecto.service.ProyectoService;
+import com.redmuqui.platform.actividad.service.ActividadService;
+import com.redmuqui.platform.actividad.dto.ActividadResponseDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -26,6 +28,7 @@ import java.util.Set;
 public class ProyectoController {
 
     private final ProyectoService service;
+    private final ActividadService actividadService;
 
     @GetMapping
     @Operation(summary = "Listar proyectos paginados con filtros bÃ¡sicos (RF-022)")
@@ -66,6 +69,12 @@ public class ProyectoController {
     @Operation(summary = "Listar miembros del equipo del proyecto")
     public ResponseEntity<Set<EquipoMemberDTO>> obtenerEquipo(@PathVariable Long id) {
         return ResponseEntity.ok(service.obtenerEquipo(id));
+    }
+
+    @GetMapping("/{id}/actividades")
+    @Operation(summary = "Listar actividades y subactividades de un proyecto")
+    public ResponseEntity<java.util.List<ActividadResponseDTO>> obtenerActividades(@PathVariable Long id) {
+        return ResponseEntity.ok(actividadService.listarPorProyecto(id));
     }
 
     @PostMapping("/{id}/equipo")

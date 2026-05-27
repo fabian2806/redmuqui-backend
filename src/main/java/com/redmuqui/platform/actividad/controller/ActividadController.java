@@ -45,4 +45,10 @@ public class ActividadController {
     public ResponseEntity<ActividadResponseDTO> cambiarEstado(@PathVariable Long id, @RequestParam EstadoActividad estado) {
         return ResponseEntity.ok(service.cambiarEstado(id, estado));
     }
+
+    @PatchMapping("/{id}/avance")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'TECNICO')")
+    public ResponseEntity<ActividadResponseDTO> actualizarAvance(@PathVariable Long id, @RequestParam Integer porcentajeAvance) {
+        return ResponseEntity.ok(service.actualizarAvance(id, porcentajeAvance));
+    }
 }
