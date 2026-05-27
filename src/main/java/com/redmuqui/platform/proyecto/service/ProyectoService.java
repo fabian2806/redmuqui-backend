@@ -6,13 +6,18 @@ import com.redmuqui.platform.common.exception.ResourceNotFoundException;
 import com.redmuqui.platform.ejetematico.repository.EjeTematicoRepository;
 import com.redmuqui.platform.macroregion.entity.Macroregion;
 import com.redmuqui.platform.macroregion.repository.MacroregionRepository;
+import com.redmuqui.platform.institucion.entity.Institucion;
+import com.redmuqui.platform.institucion.repository.InstitucionRepository;
+import com.redmuqui.platform.proyecto.dto.AsociarInstitucionesDTO;
 import com.redmuqui.platform.proyecto.dto.EquipoMemberDTO;
+import com.redmuqui.platform.proyecto.dto.InstitucionParticipacionDTO;
 import com.redmuqui.platform.proyecto.dto.ProyectoCreateDTO;
 import com.redmuqui.platform.proyecto.dto.ProyectoResponseDTO;
 import com.redmuqui.platform.proyecto.dto.ProyectoUpdateDTO;
 import com.redmuqui.platform.proyecto.entity.EstadoProyecto;
 import com.redmuqui.platform.proyecto.entity.Proyecto;
 import com.redmuqui.platform.proyecto.entity.ProyectoEquipo;
+import com.redmuqui.platform.proyecto.entity.ProyectoInstitucion;
 import com.redmuqui.platform.proyecto.mapper.ProyectoMapper;
 import com.redmuqui.platform.proyecto.repository.ProyectoRepository;
 import com.redmuqui.platform.territorio.entity.Territorio;
@@ -29,7 +34,9 @@ import jakarta.persistence.criteria.JoinType;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -41,6 +48,7 @@ public class ProyectoService {
     private final EjeTematicoRepository ejeTematicoRepository;
     private final UsuarioRepository usuarioRepository;
     private final TerritorioRepository territorioRepository;
+    private final InstitucionRepository institucionRepository;
     private final ProyectoMapper mapper;
 
     @Transactional(readOnly = true)
@@ -157,6 +165,24 @@ public class ProyectoService {
             .collect(Collectors.toSet());
     }
 
+    @Transactional
+    public void asociarInstituciones(Long idProyecto, AsociarInstitucionesDTO dto) {
+        Proyecto proyecto = buscarOFallar(idProyecto);
+        Map<Long, Institucion> instituciones = cargarInstitucionesOFallar(
+            dto.getInstituciones().stream()
+                .map(InstitucionParticipacionDTO::getIdInstitucion)
+                .collect(Collectors.toSet())
+        );
+
+        for (InstitucionParticipacionDTO item : dto.getInstituciones()) {
+            ProyectoInstitucion asociacion = new ProyectoInstitucion();
+            asociacion.setProyecto(proyecto);
+            asociacion.setInstitucion(instituciones.get(item.getIdInstitucion()));
+            asociacion.setTipoParticipacion(item.getTipoParticipacion());
+            proyecto.getInstituciones().add(asociacion);
+        }
+    }
+
     private Proyecto buscarOFallar(Long id) {
         return proyectoRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Proyecto", id));
@@ -257,5 +283,26 @@ public class ProyectoService {
         }
 
         return new HashSet<>(territorios);
+    }
+
+    private Map<Long, Institucion> cargarInstitucionesOFallar(Set<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return Map.of();
+        }
+
+        List<Institucion> instituciones = institucionRepository.findAllById(ids);
+        Set<Long> encontrados = instituciones.stream()
+            .map(Institucion::getId)
+            .collect(Collectors.toSet());
+        Set<Long> faltantes = ids.stream()
+            .filter(id -> !encontrados.contains(id))
+            .collect(Collectors.toSet());
+
+        if (!faltantes.isEmpty()) {
+            throw new ResourceNotFoundException("Institucion", faltantes.toString());
+        }
+
+        return instituciones.stream()
+            .collect(Collectors.toMap(Institucion::getId, Function.identity()));
     }
 }

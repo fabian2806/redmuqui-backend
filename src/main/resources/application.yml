@@ -27,6 +27,7 @@ spring:
     baseline-on-migrate: false
     locations: classpath:db/migration
     clean-disabled: true                # En prod NUNCA se ejecuta flyway:clean
+    out-of-order: true
 
   jackson:
     serialization:
