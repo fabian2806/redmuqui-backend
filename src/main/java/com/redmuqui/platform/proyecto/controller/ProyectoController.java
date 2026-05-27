@@ -3,6 +3,7 @@ package com.redmuqui.platform.proyecto.controller;
 import com.redmuqui.platform.common.dto.PageResponse;
 import com.redmuqui.platform.proyecto.dto.AsociarInstitucionesDTO;
 import com.redmuqui.platform.proyecto.dto.EquipoMemberDTO;
+import com.redmuqui.platform.proyecto.dto.InstitucionParticipacionDTO;
 import com.redmuqui.platform.proyecto.dto.ProyectoCreateDTO;
 import com.redmuqui.platform.proyecto.dto.ProyectoResponseDTO;
 import com.redmuqui.platform.proyecto.dto.ProyectoUpdateDTO;
@@ -75,6 +76,12 @@ public class ProyectoController {
     public ResponseEntity<Void> agregarMiembro(@PathVariable Long id, @Valid @RequestBody EquipoMemberDTO dto) {
         service.agregarMiembro(id, dto);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{id}/instituciones")
+    @Operation(summary = "Listar instituciones asociadas al proyecto")
+    public ResponseEntity<Set<InstitucionParticipacionDTO>> obtenerInstituciones(@PathVariable Long id) {
+        return ResponseEntity.ok(service.obtenerInstituciones(id));
     }
 
     @PostMapping("/{id}/instituciones")

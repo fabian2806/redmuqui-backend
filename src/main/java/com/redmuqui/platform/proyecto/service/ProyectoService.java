@@ -165,6 +165,19 @@ public class ProyectoService {
             .collect(Collectors.toSet());
     }
 
+    @Transactional(readOnly = true)
+    public Set<InstitucionParticipacionDTO> obtenerInstituciones(Long idProyecto) {
+        Proyecto proyecto = buscarOFallar(idProyecto);
+        return proyecto.getInstituciones().stream()
+            .map(pi -> {
+                InstitucionParticipacionDTO dto = new InstitucionParticipacionDTO();
+                dto.setIdInstitucion(pi.getInstitucion().getId());
+                dto.setTipoParticipacion(pi.getTipoParticipacion());
+                return dto;
+            })
+            .collect(Collectors.toSet());
+    }
+
     @Transactional
     public void asociarInstituciones(Long idProyecto, AsociarInstitucionesDTO dto) {
         Proyecto proyecto = buscarOFallar(idProyecto);
