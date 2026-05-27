@@ -6,6 +6,7 @@ import com.redmuqui.platform.proyecto.dto.EquipoMemberDTO;
 import com.redmuqui.platform.proyecto.dto.InstitucionParticipacionDTO;
 import com.redmuqui.platform.proyecto.dto.ProyectoCreateDTO;
 import com.redmuqui.platform.proyecto.dto.ProyectoResponseDTO;
+import com.redmuqui.platform.proyecto.dto.ProyectoTerritorioRequestDTO;
 import com.redmuqui.platform.proyecto.dto.ProyectoUpdateDTO;
 import com.redmuqui.platform.proyecto.entity.EstadoProyecto;
 import com.redmuqui.platform.proyecto.service.ProyectoService;
@@ -92,6 +93,17 @@ public class ProyectoController {
         @Valid @RequestBody AsociarInstitucionesDTO dto
     ) {
         service.asociarInstituciones(id, dto);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/territorios")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'TECNICO')")
+    @Operation(summary = "Asociar uno o más territorios a un proyecto")
+    public ResponseEntity<Void> asociarTerritorios(
+        @PathVariable Long id,
+        @Valid @RequestBody ProyectoTerritorioRequestDTO dto
+    ) {
+        service.asociarTerritorios(id, dto);
         return ResponseEntity.noContent().build();
     }
 }

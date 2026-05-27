@@ -13,6 +13,7 @@ import com.redmuqui.platform.proyecto.dto.EquipoMemberDTO;
 import com.redmuqui.platform.proyecto.dto.InstitucionParticipacionDTO;
 import com.redmuqui.platform.proyecto.dto.ProyectoCreateDTO;
 import com.redmuqui.platform.proyecto.dto.ProyectoResponseDTO;
+import com.redmuqui.platform.proyecto.dto.ProyectoTerritorioRequestDTO;
 import com.redmuqui.platform.proyecto.dto.ProyectoUpdateDTO;
 import com.redmuqui.platform.proyecto.entity.EstadoProyecto;
 import com.redmuqui.platform.proyecto.entity.Proyecto;
@@ -194,6 +195,13 @@ public class ProyectoService {
             asociacion.setTipoParticipacion(item.getTipoParticipacion());
             proyecto.getInstituciones().add(asociacion);
         }
+    }
+
+    @Transactional
+    public void asociarTerritorios(Long idProyecto, ProyectoTerritorioRequestDTO dto) {
+        Proyecto proyecto = buscarOFallar(idProyecto);
+        Set<Territorio> territorios = cargarTerritoriosOFallar(dto.getTerritoriosIds());
+        proyecto.setTerritorios(territorios);
     }
 
     private Proyecto buscarOFallar(Long id) {
