@@ -84,4 +84,34 @@ public class ProyectoController {
         service.agregarMiembro(id, dto);
         return ResponseEntity.noContent().build();
     }
+
+    @DeleteMapping("/{id}/equipo/{idUsuario}")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'TECNICO')")
+    @Operation(summary = "Eliminar miembro del equipo del proyecto")
+    public ResponseEntity<Void> eliminarMiembro(@PathVariable Long id, @PathVariable Long idUsuario) {
+        service.eliminarMiembro(id, idUsuario);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/{id}/equipo/{idUsuario}")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'TECNICO')")
+    @Operation(summary = "Actualizar rol de miembro del equipo del proyecto")
+    public ResponseEntity<Void> actualizarRolMiembro(@PathVariable Long id, @PathVariable Long idUsuario, @RequestParam String nuevoRol) {
+        service.actualizarRolMiembro(id, idUsuario, nuevoRol);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{id}/estado")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'TECNICO')")
+    @Operation(summary = "Actualizar estado de un proyecto (RF-031)")
+    public ResponseEntity<ProyectoResponseDTO> cambiarEstado(@PathVariable Long id, @RequestParam EstadoProyecto estado) {
+        return ResponseEntity.ok(service.cambiarEstado(id, estado));
+    }
+
+    @PatchMapping("/{id}/avance")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'TECNICO')")
+    @Operation(summary = "Actualizar porcentaje de avance de un proyecto (RF-032)")
+    public ResponseEntity<ProyectoResponseDTO> actualizarAvance(@PathVariable Long id, @RequestParam Double porcentajeAvance) {
+        return ResponseEntity.ok(service.actualizarAvance(id, porcentajeAvance));
+    }
 }

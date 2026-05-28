@@ -157,6 +157,40 @@ public class ProyectoService {
             .collect(Collectors.toSet());
     }
 
+    @Transactional
+    public void eliminarMiembro(Long idProyecto, Long idUsuario) {
+        Proyecto proyecto = buscarOFallar(idProyecto);
+        boolean eliminado = proyecto.getEquipo().removeIf(pe -> pe.getUsuario().getId().equals(idUsuario));
+        if (!eliminado) {
+            throw new ResourceNotFoundException("El usuario con id " + idUsuario + " no es miembro del proyecto");
+        }
+    }
+
+    @Transactional
+    public void actualizarRolMiembro(Long idProyecto, Long idUsuario, String nuevoRol) {
+        Proyecto proyecto = buscarOFallar(idProyecto);
+        ProyectoEquipo miembro = proyecto.getEquipo().stream()
+            .filter(pe -> pe.getUsuario().getId().equals(idUsuario))
+            .findFirst()
+            .orElseThrow(() -> new ResourceNotFoundException("El usuario con id " + idUsuario + " no es miembro del proyecto"));
+        miembro.setRolEnProyecto(nuevoRol);
+    }
+
+    @Transactional
+    public ProyectoResponseDTO cambiarEstado(Long id, EstadoProyecto estado) {
+        Proyecto proyecto = buscarOFallar(id);
+        proyecto.setEstado(estado);
+        return mapper.toResponseDTO(proyecto);
+    }
+
+    @Transactional
+    public ProyectoResponseDTO actualizarAvance(Long id, Double porcentajeAvance) {
+        Proyecto proyecto = buscarOFallar(id);
+        validarPorcentajeAvance(porcentajeAvance);
+        proyecto.setPorcentajeAvance(porcentajeAvance);
+        return mapper.toResponseDTO(proyecto);
+    }
+
     private Proyecto buscarOFallar(Long id) {
         return proyectoRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Proyecto", id));
