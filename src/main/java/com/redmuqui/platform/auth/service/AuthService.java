@@ -3,6 +3,8 @@ package com.redmuqui.platform.auth.service;
 import com.redmuqui.platform.auth.dto.LoginRequest;
 import com.redmuqui.platform.auth.dto.RefreshTokenRequest;
 import com.redmuqui.platform.auth.dto.TokenResponse;
+import com.redmuqui.platform.auth.entity.RefreshTokenRevocado;
+import com.redmuqui.platform.auth.repository.RefreshTokenRevocadoRepository;
 import com.redmuqui.platform.common.exception.BusinessException;
 import com.redmuqui.platform.usuario.entity.Usuario;
 import com.redmuqui.platform.usuario.repository.UsuarioRepository;
@@ -17,7 +19,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 /**
  * Lógica de autenticación: login, refresh, logout, recuperación.
@@ -37,6 +43,7 @@ public class AuthService {
     private final JwtService jwtService;
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
+    private final RefreshTokenRevocadoRepository refreshTokenRevocadoRepository;
 
     @Transactional
     public TokenResponse login(LoginRequest request) {
@@ -66,6 +73,10 @@ public class AuthService {
                 throw new BusinessException("El token proporcionado no es un refresh token");
             }
 
+            if (refreshTokenRevocadoRepository.existsByTokenHash(sha256(request.refreshToken()))) {
+                throw new BusinessException("Refresh token revocado");
+            }
+
             UserDetails userDetails = userDetailsService.loadUserByUsername(email);
 
             if (!jwtService.isTokenValid(request.refreshToken(), userDetails)) {
@@ -83,11 +94,45 @@ public class AuthService {
         }
     }
 
-    public void logout(String accessToken) {
-        // TODO: Implementar invalidación de tokens.
-        // Opciones: lista negra en Redis, tabla de tokens revocados en BD.
-        // Por ahora es no-op; el cliente debe descartar el token.
-        log.info("Logout solicitado (no-op por ahora)");
+    @Transactional
+    public void logout(String refreshToken) {
+        if (refreshToken == null || refreshToken.isBlank()) {
+            log.info("Logout solicitado sin refresh token; no-op.");
+            return;
+        }
+        try {
+            if (!jwtService.isRefreshToken(refreshToken)) {
+                log.warn("Logout recibió un token que no es refresh; ignorando.");
+                return;
+            }
+            String hash = sha256(refreshToken);
+            if (refreshTokenRevocadoRepository.existsByTokenHash(hash)) {
+                return; // ya revocado, idempotente
+            }
+            LocalDateTime expiresAt = jwtService.extractExpiration(refreshToken)
+                .toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
+            refreshTokenRevocadoRepository.save(
+                RefreshTokenRevocado.builder()
+                    .tokenHash(hash)
+                    .revokedAt(LocalDateTime.now())
+                    .expiresAt(expiresAt)
+                    .build()
+            );
+        } catch (JwtException ex) {
+            log.warn("Logout con refresh token inválido/expirado; no se registra revocación.");
+        }
+    }
+
+    private static String sha256(String input) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] bytes = md.digest(input.getBytes(StandardCharsets.UTF_8));
+            StringBuilder hex = new StringBuilder(bytes.length * 2);
+            for (byte b : bytes) hex.append(String.format("%02x", b));
+            return hex.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 no disponible", e);
+        }
     }
 
     public void requestRecovery(String email) {
