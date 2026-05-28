@@ -4,6 +4,7 @@ import com.redmuqui.platform.common.dto.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -54,6 +55,12 @@ public class GlobalExceptionHandler {
             fieldErrors
         );
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleUnreadableMessage(HttpMessageNotReadableException ex, HttpServletRequest request) {
+        log.warn("JSON de entrada invÃ¡lido: {}", ex.getMostSpecificCause().getMessage());
+        return build(HttpStatus.BAD_REQUEST, "JSON de entrada invÃ¡lido o con valores no permitidos", request);
     }
 
     @ExceptionHandler(BadCredentialsException.class)
