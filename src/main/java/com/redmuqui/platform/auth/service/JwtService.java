@@ -88,6 +88,10 @@ public class JwtService {
         return accessTokenExpirationMs;
     }
 
+    public Date extractExpiration(String token) {
+        return extractClaim(token, Claims::getExpiration);
+    }
+
     private String buildToken(Map<String, Object> claims, String subject, long expirationMs) {
         return Jwts.builder()
             .claims(claims)

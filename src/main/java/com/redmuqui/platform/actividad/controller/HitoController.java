@@ -15,26 +15,58 @@ import java.net.URI;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/hitos")
+@RequestMapping("/api/v1")
 @RequiredArgsConstructor
 @Tag(name = "Hitos")
 public class HitoController {
 
     private final HitoService service;
 
-    @GetMapping
+    @GetMapping("/proyectos/{idProyecto}/hitos")
+    public ResponseEntity<List<HitoResponseDTO>> listarPorProyectoPath(@PathVariable Long idProyecto) {
+        return ResponseEntity.ok(service.listarPorProyecto(idProyecto));
+    }
+
+    @PostMapping("/proyectos/{idProyecto}/hitos")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'TECNICO')")
+    public ResponseEntity<HitoResponseDTO> crearEnProyecto(
+        @PathVariable Long idProyecto,
+        @Valid @RequestBody HitoCreateDTO dto
+    ) {
+        HitoResponseDTO creado = service.crear(idProyecto, dto);
+        return ResponseEntity.created(URI.create("/api/v1/proyectos/" + idProyecto + "/hitos/" + creado.id())).body(creado);
+    }
+
+    @PutMapping("/proyectos/{idProyecto}/hitos/{id}")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'TECNICO')")
+    public ResponseEntity<HitoResponseDTO> actualizar(
+        @PathVariable Long idProyecto,
+        @PathVariable Long id,
+        @Valid @RequestBody HitoCreateDTO dto
+    ) {
+        return ResponseEntity.ok(service.actualizar(idProyecto, id, dto));
+    }
+
+    @DeleteMapping("/proyectos/{idProyecto}/hitos/{id}")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'TECNICO')")
+    public ResponseEntity<Void> eliminar(@PathVariable Long idProyecto, @PathVariable Long id) {
+        service.eliminar(idProyecto, id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/hitos")
     public ResponseEntity<List<HitoResponseDTO>> listarPorProyecto(@RequestParam Long idProyecto) {
         return ResponseEntity.ok(service.listarPorProyecto(idProyecto));
     }
 
-    @PostMapping
+    @PostMapping("/hitos")
     @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'TECNICO')")
     public ResponseEntity<HitoResponseDTO> crear(@Valid @RequestBody HitoCreateDTO dto) {
         HitoResponseDTO creado = service.crear(dto);
         return ResponseEntity.created(URI.create("/api/v1/hitos/" + creado.id())).body(creado);
     }
 
-    @PatchMapping("/{id}/estado")
+    @PatchMapping("/hitos/{id}/estado")
     @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'TECNICO')")
     public ResponseEntity<HitoResponseDTO> cambiarEstado(@PathVariable Long id, @RequestParam EstadoHito estado) {
         return ResponseEntity.ok(service.cambiarEstado(id, estado));

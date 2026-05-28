@@ -11,5 +11,5 @@ public record HitoCreateDTO(
     String descripcion,
     @NotNull LocalDate fechaClave,
     EstadoHito estado,
-    @NotNull Long idProyecto
+    Long idProyecto
 ) {}

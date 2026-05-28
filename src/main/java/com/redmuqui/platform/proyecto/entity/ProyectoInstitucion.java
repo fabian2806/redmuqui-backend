@@ -17,7 +17,6 @@ import java.util.Objects;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 @IdClass(ProyectoInstitucion.PK.class)
 public class ProyectoInstitucion {
 

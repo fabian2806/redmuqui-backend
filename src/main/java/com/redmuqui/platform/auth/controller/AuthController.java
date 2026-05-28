@@ -6,7 +6,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -32,10 +31,8 @@ public class AuthController {
 
     @PostMapping("/logout")
     @Operation(summary = "Cerrar sesión (RF-009)")
-    public ResponseEntity<Void> logout(@RequestHeader(HttpHeaders.AUTHORIZATION) String authHeader) {
-        String token = authHeader != null && authHeader.startsWith("Bearer ")
-            ? authHeader.substring(7) : null;
-        authService.logout(token);
+    public ResponseEntity<Void> logout(@Valid @RequestBody RefreshTokenRequest request) {
+        authService.logout(request.refreshToken());
         return ResponseEntity.noContent().build();
     }
 
