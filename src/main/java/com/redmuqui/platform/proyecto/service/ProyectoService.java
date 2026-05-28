@@ -21,6 +21,7 @@ import com.redmuqui.platform.proyecto.entity.ProyectoEquipo;
 import com.redmuqui.platform.proyecto.entity.ProyectoInstitucion;
 import com.redmuqui.platform.proyecto.mapper.ProyectoMapper;
 import com.redmuqui.platform.proyecto.repository.ProyectoRepository;
+import com.redmuqui.platform.proyecto.specification.ProyectoSpecification;
 import com.redmuqui.platform.territorio.entity.Territorio;
 import com.redmuqui.platform.territorio.repository.TerritorioRepository;
 import com.redmuqui.platform.usuario.repository.UsuarioRepository;
@@ -31,7 +32,6 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import jakarta.persistence.criteria.JoinType;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -58,9 +58,13 @@ public class ProyectoService {
         EstadoProyecto estado,
         Long idMacroregion,
         Long idEjeTematico,
+        Long idInstitucion,
+        Integer anio,
         Pageable pageable
     ) {
-        Specification<Proyecto> filtros = construirFiltros(q, estado, idMacroregion, idEjeTematico);
+        Specification<Proyecto> filtros = ProyectoSpecification.construir(
+            q, estado, idMacroregion, idEjeTematico, idInstitucion, anio
+        );
         return proyectoRepository.findAll(filtros, pageable).map(mapper::toResponseDTO);
     }
 
@@ -207,40 +211,6 @@ public class ProyectoService {
     private Proyecto buscarOFallar(Long id) {
         return proyectoRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Proyecto", id));
-    }
-
-    private Specification<Proyecto> construirFiltros(
-        String q,
-        EstadoProyecto estado,
-        Long idMacroregion,
-        Long idEjeTematico
-    ) {
-        Specification<Proyecto> spec = Specification.where(null);
-
-        if (q != null && !q.isBlank()) {
-            String patron = "%" + q.trim().toLowerCase(Locale.ROOT) + "%";
-            spec = spec.and((root, query, cb) -> cb.or(
-                cb.like(cb.lower(root.get("nombre")), patron),
-                cb.like(cb.lower(root.get("codigoInterno")), patron)
-            ));
-        }
-
-        if (estado != null) {
-            spec = spec.and((root, query, cb) -> cb.equal(root.get("estado"), estado));
-        }
-
-        if (idMacroregion != null) {
-            spec = spec.and((root, query, cb) -> {
-                query.distinct(true);
-                return cb.equal(root.join("macroregiones", JoinType.LEFT).get("id"), idMacroregion);
-            });
-        }
-
-        if (idEjeTematico != null) {
-            spec = spec.and((root, query, cb) -> cb.equal(root.get("ejeTematico").get("id"), idEjeTematico));
-        }
-
-        return spec;
     }
 
     private void validarRangoFechas(java.time.LocalDate fechaInicio, java.time.LocalDate fechaFinEstimada) {

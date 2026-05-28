@@ -31,16 +31,18 @@ public class ProyectoController {
     private final ProyectoService service;
 
     @GetMapping
-    @Operation(summary = "Listar proyectos paginados con filtros bÃ¡sicos (RF-022)")
+    @Operation(summary = "Listar proyectos paginados con filtros (RF-082 a RF-087)")
     public ResponseEntity<PageResponse<ProyectoResponseDTO>> listar(
         @RequestParam(required = false) String q,
         @RequestParam(required = false) EstadoProyecto estado,
         @RequestParam(required = false) Long idMacroregion,
         @RequestParam(required = false) Long idEjeTematico,
+        @RequestParam(required = false) Long idInstitucion,
+        @RequestParam(required = false) Integer anio,
         Pageable pageable
     ) {
         return ResponseEntity.ok(PageResponse.from(
-            service.listar(q, estado, idMacroregion, idEjeTematico, pageable)
+            service.listar(q, estado, idMacroregion, idEjeTematico, idInstitucion, anio, pageable)
         ));
     }
 

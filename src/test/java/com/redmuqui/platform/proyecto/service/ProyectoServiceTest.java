@@ -52,7 +52,7 @@ class ProyectoServiceTest {
         Pageable pageable = PageRequest.of(0, 10);
         when(proyectoRepository.findAll(anySpecification(), eq(pageable))).thenReturn(Page.empty());
 
-        Page<?> result = service.listar("PRY", EstadoProyecto.EN_CURSO, 1L, 2L, pageable);
+        Page<?> result = service.listar("PRY", EstadoProyecto.EN_CURSO, 1L, 2L, null, null, pageable);
 
         assertThat(result.getTotalElements()).isZero();
         verify(proyectoRepository).findAll(anySpecification(), eq(pageable));
