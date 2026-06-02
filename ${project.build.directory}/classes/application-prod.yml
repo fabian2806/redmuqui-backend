@@ -1,0 +1,21 @@
+# Perfil de producción
+# - Logs reducidos
+# - Auth obligatoria
+# - SQL oculto
+# - ddl-auto=validate (requiere Flyway o esquema pre-creado)
+
+spring:
+  jpa:
+    show-sql: false
+    hibernate:
+      ddl-auto: validate
+
+app:
+  security:
+    enabled: true
+    method-enabled: true
+
+logging:
+  level:
+    root: WARN
+    com.redmuqui.platform: INFO

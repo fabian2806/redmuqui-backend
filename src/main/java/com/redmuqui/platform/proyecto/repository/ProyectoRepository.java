@@ -11,4 +11,5 @@ import java.util.Optional;
 public interface ProyectoRepository extends JpaRepository<Proyecto, Long>, JpaSpecificationExecutor<Proyecto> {
     Optional<Proyecto> findByCodigoInternoIgnoreCase(String codigoInterno);
     boolean existsByCodigoInternoIgnoreCase(String codigoInterno);
+    boolean existsByCodigoInternoIgnoreCaseAndIdNot(String codigoInterno, Long id);
 }

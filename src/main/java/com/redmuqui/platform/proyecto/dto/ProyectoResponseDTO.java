@@ -24,8 +24,10 @@ public record ProyectoResponseDTO(
     String nombreEjeTematico,
     Long idEjeTematico,
     UsuarioSummaryDTO responsablePrincipal,
-    Set<TerritorioRefDTO> territorios
+    Set<TerritorioRefDTO> territorios,
+    Set<InstitucionRefDTO> instituciones
 ) {
     public record MacroregionRefDTO(Long id, String nombre) {}
     public record TerritorioRefDTO(Long id, String nombre) {}
+    public record InstitucionRefDTO(Long id, String nombre, String tipoParticipacion) {}
 }
