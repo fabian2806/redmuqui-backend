@@ -1,6 +1,6 @@
 # Perfil de desarrollo local
 # - Logs verbosos
-# - Auth deshabilitada para no pelear con tokens al testear endpoints
+# - Auth habilitada para validar el flujo real de login/JWT
 # - SQL visible en consola
 #
 # NUNCA usar este perfil en producción.
@@ -11,8 +11,8 @@ spring:
 
 app:
   security:
-    enabled: false   # Desactiva Spring Security en endpoints (ver SecurityConfig)
-    method-enabled: false   # Desactiva @PreAuthorize/@Secured en dev
+    enabled: true
+    method-enabled: true
 
 logging:
   level:
