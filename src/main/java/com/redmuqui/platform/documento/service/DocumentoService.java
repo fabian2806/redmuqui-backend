@@ -1,5 +1,6 @@
 package com.redmuqui.platform.documento.service;
 
+import com.redmuqui.platform.common.exception.BusinessException;
 import com.redmuqui.platform.common.exception.ResourceNotFoundException;
 import com.redmuqui.platform.documento.dto.DocumentoCreateDTO;
 import com.redmuqui.platform.documento.dto.DocumentoResponseDTO;
@@ -8,6 +9,7 @@ import com.redmuqui.platform.documento.entity.EstadoDocumento;
 import com.redmuqui.platform.documento.repository.DocumentoRepository;
 import com.redmuqui.platform.ejetematico.repository.EjeTematicoRepository;
 import com.redmuqui.platform.proyecto.repository.ProyectoRepository;
+import com.redmuqui.platform.territorio.entity.Territorio;
 import com.redmuqui.platform.territorio.repository.TerritorioRepository;
 import com.redmuqui.platform.usuario.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +20,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -29,6 +33,14 @@ public class DocumentoService {
     private final EjeTematicoRepository ejeTematicoRepository;
     private final UsuarioRepository usuarioRepository;
     private final TerritorioRepository territorioRepository;
+
+    /**
+     * Tipos de documento permitidos al registrar (RF-046). Debe mantenerse
+     * idéntico a la constante TIPOS_DOCUMENTO del frontend (lib/types.ts).
+     */
+    private static final Set<String> TIPOS_PERMITIDOS = Set.of(
+        "Informe", "Pronunciamiento", "Investigación", "Manual", "Cartilla", "Resumen técnico"
+    );
 
     @Transactional(readOnly = true)
     public Page<DocumentoResponseDTO> listar(Pageable pageable) {
@@ -42,10 +54,17 @@ public class DocumentoService {
 
     @Transactional
     public DocumentoResponseDTO crear(DocumentoCreateDTO dto) {
+        // RF-046: el tipo debe ser uno de los valores permitidos.
+        String tipo = dto.tipo() != null ? dto.tipo().trim() : null;
+        if (tipo == null || !TIPOS_PERMITIDOS.contains(tipo)) {
+            throw new BusinessException(
+                "El tipo de documento no es válido. Valores permitidos: " + TIPOS_PERMITIDOS);
+        }
+
         Documento documento = Documento.builder()
             .titulo(dto.titulo())
             .descripcion(dto.descripcion())
-            .tipo(dto.tipo())
+            .tipo(tipo)
             .estado(dto.estado() != null ? dto.estado() : EstadoDocumento.BORRADOR)
             .tipoArchivo(dto.tipoArchivo())
             .enlace(dto.enlace())
@@ -68,7 +87,12 @@ public class DocumentoService {
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario", dto.idRespValidacion())));
         }
         if (dto.idTerritorios() != null && !dto.idTerritorios().isEmpty()) {
-            documento.setTerritorios(new HashSet<>(territorioRepository.findAllById(dto.idTerritorios())));
+            // RF-052: validar que TODOS los territorios solicitados existan antes de asociar.
+            List<Territorio> encontrados = territorioRepository.findAllById(dto.idTerritorios());
+            if (encontrados.size() != dto.idTerritorios().size()) {
+                throw new ResourceNotFoundException("Territorio", dto.idTerritorios());
+            }
+            documento.setTerritorios(new HashSet<>(encontrados));
         }
 
         return toDTO(documentoRepository.save(documento));
