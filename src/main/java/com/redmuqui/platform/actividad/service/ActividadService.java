@@ -2,6 +2,7 @@ package com.redmuqui.platform.actividad.service;
 
 import com.redmuqui.platform.actividad.dto.ActividadCreateDTO;
 import com.redmuqui.platform.actividad.dto.ActividadResponseDTO;
+import com.redmuqui.platform.actividad.dto.ActividadUpdateDTO;
 import com.redmuqui.platform.actividad.entity.Actividad;
 import com.redmuqui.platform.actividad.entity.EstadoActividad;
 import com.redmuqui.platform.actividad.repository.ActividadRepository;
@@ -14,7 +15,14 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.redmuqui.platform.actividad.dto.SubactividadArchivoResponseDTO;
+import com.redmuqui.platform.actividad.dto.SubactividadCofinanciamientoResponseDTO;
+import com.redmuqui.platform.actividad.dto.SubactividadResponseDTO;
+import com.redmuqui.platform.actividad.entity.Subactividad;
+import com.redmuqui.platform.proyecto.entity.Proyecto;
+
 import java.util.HashSet;
+import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
@@ -26,13 +34,23 @@ public class ActividadService {
     private final UsuarioRepository usuarioRepository;
 
     @Transactional(readOnly = true)
-    public Page<ActividadResponseDTO> listar(Pageable pageable) {
+    public Page<ActividadResponseDTO> listar(Long proyectoId, Pageable pageable) {
+        if (proyectoId != null) {
+            return actividadRepository.findByProyectoId(proyectoId, pageable).map(this::toDTO);
+        }
         return actividadRepository.findAll(pageable).map(this::toDTO);
     }
 
     @Transactional(readOnly = true)
     public ActividadResponseDTO obtener(Long id) {
         return toDTO(buscarOFallar(id));
+    }
+
+    @Transactional(readOnly = true)
+    public List<ActividadResponseDTO> listarPorProyecto(Long proyectoId) {
+        return actividadRepository.findByProyectoId(proyectoId).stream()
+                .map(this::toDTO)
+                .collect(Collectors.toList());
     }
 
     @Transactional
@@ -55,9 +73,52 @@ public class ActividadService {
     }
 
     @Transactional
+    public ActividadResponseDTO actualizar(Long id, ActividadUpdateDTO dto) {
+        Actividad a = buscarOFallar(id);
+
+        a.setNombre(dto.nombre());
+        a.setDescripcion(dto.descripcion());
+        a.setFechaInicio(dto.fechaInicio());
+        a.setFechaFin(dto.fechaFin());
+        if (dto.estado() != null) a.setEstado(dto.estado());
+        a.setProyecto(proyectoRepository.findById(dto.idProyecto())
+            .orElseThrow(() -> new ResourceNotFoundException("Proyecto", dto.idProyecto())));
+
+        if (dto.idResponsables() != null) {
+            a.setResponsables(new HashSet<>(usuarioRepository.findAllById(dto.idResponsables())));
+        }
+
+        return toDTO(actividadRepository.save(a));
+    }
+
+    @Transactional
     public ActividadResponseDTO cambiarEstado(Long id, EstadoActividad nuevoEstado) {
         Actividad a = buscarOFallar(id);
         a.setEstado(nuevoEstado);
+        return toDTO(a);
+    }
+
+    @Transactional
+    public void eliminar(Long id) {
+        Actividad a = buscarOFallar(id);
+        actividadRepository.delete(a);
+    }
+
+    @Transactional
+    public ActividadResponseDTO actualizarAvance(Long id, Integer porcentajeAvance) {
+        Actividad a = buscarOFallar(id);
+        a.setPorcentajeAvance(porcentajeAvance);
+        a = actividadRepository.save(a);
+        
+        // Calcular nuevo avance del proyecto
+        Proyecto p = a.getProyecto();
+        List<Actividad> actividades = actividadRepository.findByProyectoId(p.getId());
+        if (!actividades.isEmpty()) {
+            int total = actividades.stream().mapToInt(act -> act.getPorcentajeAvance() != null ? act.getPorcentajeAvance() : 0).sum();
+            p.setPorcentajeAvance((double) total / actividades.size());
+            proyectoRepository.save(p);
+        }
+        
         return toDTO(a);
     }
 
@@ -70,8 +131,32 @@ public class ActividadService {
         return new ActividadResponseDTO(
             a.getId(), a.getNombre(), a.getDescripcion(),
             a.getFechaInicio(), a.getFechaFin(), a.getEstado(),
+            a.getPorcentajeAvance(),
             a.getProyecto().getId(),
-            a.getResponsables().stream().map(u -> u.getId()).collect(Collectors.toSet())
+            a.getResponsables().stream().map(u -> u.getId()).collect(Collectors.toSet()),
+            a.getSubactividades() == null ? List.of() : a.getSubactividades().stream()
+                .map(this::mapSubactividad)
+                .collect(Collectors.toList())
+        );
+    }
+
+    private SubactividadResponseDTO mapSubactividad(Subactividad s) {
+        return new SubactividadResponseDTO(
+            s.getId(),
+            s.getNombre(),
+            s.getResponsable().getNombres() + " " + s.getResponsable().getApellidos(),
+            s.getPresupuesto(),
+            s.getHombresInvolucrados(),
+            s.getMujeresInvolucradas(),
+            s.getFechaInicio(),
+            s.getFechaFin(),
+            s.getDescripcion(),
+            s.getArchivosEvidencia() == null ? List.of() : s.getArchivosEvidencia().stream()
+                .map(a -> new SubactividadArchivoResponseDTO(a.getId(), a.getNombre(), a.getUrl()))
+                .collect(Collectors.toList()),
+            s.getCofinanciamientos() == null ? List.of() : s.getCofinanciamientos().stream()
+                .map(c -> new SubactividadCofinanciamientoResponseDTO(c.getActividadOrigen().getId(), c.getMonto()))
+                .collect(Collectors.toList())
         );
     }
 }

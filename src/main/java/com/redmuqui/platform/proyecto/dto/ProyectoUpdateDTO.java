@@ -10,6 +10,7 @@ import java.util.Set;
 
 public record ProyectoUpdateDTO(
     @NotBlank @Size(max = 255) String nombre,
+    @NotBlank @Size(max = 50) String codigoInterno,
     String descripcion,
     String objetivoGeneral,
     @NotNull LocalDate fechaInicio,

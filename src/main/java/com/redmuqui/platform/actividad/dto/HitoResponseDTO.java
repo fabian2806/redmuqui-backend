@@ -3,6 +3,7 @@ package com.redmuqui.platform.actividad.dto;
 import com.redmuqui.platform.actividad.entity.EstadoHito;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 public record HitoResponseDTO(
     Long id,
@@ -10,5 +11,7 @@ public record HitoResponseDTO(
     String descripcion,
     LocalDate fechaClave,
     EstadoHito estado,
-    Long idProyecto
+    Long idProyecto,
+    LocalDateTime fechaCreacion,
+    LocalDateTime fechaModificacion
 ) {}

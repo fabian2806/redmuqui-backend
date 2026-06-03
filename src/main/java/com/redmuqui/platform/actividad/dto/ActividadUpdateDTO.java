@@ -1,20 +1,18 @@
 package com.redmuqui.platform.actividad.dto;
 
 import com.redmuqui.platform.actividad.entity.EstadoActividad;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
 import java.time.LocalDate;
 import java.util.Set;
-import java.util.List;
 
-public record ActividadResponseDTO(
-    Long id,
-    String nombre,
+public record ActividadUpdateDTO(
+    @NotBlank String nombre,
     String descripcion,
     LocalDate fechaInicio,
     LocalDate fechaFin,
     EstadoActividad estado,
-    Integer porcentajeAvance,
-    Long idProyecto,
-    Set<Long> idResponsables,
-    List<SubactividadResponseDTO> subactividades
+    @NotNull Long idProyecto,
+    Set<Long> idResponsables
 ) {}

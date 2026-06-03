@@ -2,6 +2,7 @@ package com.redmuqui.platform.actividad.controller;
 
 import com.redmuqui.platform.actividad.dto.ActividadCreateDTO;
 import com.redmuqui.platform.actividad.dto.ActividadResponseDTO;
+import com.redmuqui.platform.actividad.dto.ActividadUpdateDTO;
 import com.redmuqui.platform.actividad.entity.EstadoActividad;
 import com.redmuqui.platform.actividad.service.ActividadService;
 import com.redmuqui.platform.common.dto.PageResponse;
@@ -24,8 +25,10 @@ public class ActividadController {
     private final ActividadService service;
 
     @GetMapping
-    public ResponseEntity<PageResponse<ActividadResponseDTO>> listar(Pageable pageable) {
-        return ResponseEntity.ok(PageResponse.from(service.listar(pageable)));
+    public ResponseEntity<PageResponse<ActividadResponseDTO>> listar(
+            @RequestParam(required = false) Long proyectoId,
+            Pageable pageable) {
+        return ResponseEntity.ok(PageResponse.from(service.listar(proyectoId, pageable)));
     }
 
     @GetMapping("/{id}")
@@ -40,9 +43,28 @@ public class ActividadController {
         return ResponseEntity.created(URI.create("/api/v1/actividades/" + creado.id())).body(creado);
     }
 
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'TECNICO')")
+    public ResponseEntity<ActividadResponseDTO> actualizar(@PathVariable Long id, @Valid @RequestBody ActividadUpdateDTO dto) {
+        return ResponseEntity.ok(service.actualizar(id, dto));
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'TECNICO')")
+    public ResponseEntity<Void> eliminar(@PathVariable Long id) {
+        service.eliminar(id);
+        return ResponseEntity.noContent().build();
+    }
+
     @PatchMapping("/{id}/estado")
     @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'TECNICO')")
     public ResponseEntity<ActividadResponseDTO> cambiarEstado(@PathVariable Long id, @RequestParam EstadoActividad estado) {
         return ResponseEntity.ok(service.cambiarEstado(id, estado));
+    }
+
+    @PatchMapping("/{id}/avance")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'TECNICO')")
+    public ResponseEntity<ActividadResponseDTO> actualizarAvance(@PathVariable Long id, @RequestParam Integer porcentajeAvance) {
+        return ResponseEntity.ok(service.actualizarAvance(id, porcentajeAvance));
     }
 }

@@ -5,7 +5,9 @@ import com.redmuqui.platform.actividad.dto.HitoResponseDTO;
 import com.redmuqui.platform.actividad.entity.EstadoHito;
 import com.redmuqui.platform.actividad.entity.Hito;
 import com.redmuqui.platform.actividad.repository.HitoRepository;
+import com.redmuqui.platform.common.exception.BusinessException;
 import com.redmuqui.platform.common.exception.ResourceNotFoundException;
+import com.redmuqui.platform.proyecto.entity.Proyecto;
 import com.redmuqui.platform.proyecto.repository.ProyectoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,20 +24,51 @@ public class HitoService {
 
     @Transactional(readOnly = true)
     public List<HitoResponseDTO> listarPorProyecto(Long idProyecto) {
-        return hitoRepository.findByProyectoId(idProyecto).stream().map(this::toDTO).toList();
+        validarProyectoExiste(idProyecto);
+        return hitoRepository.findByProyectoIdOrderByFechaClaveAscIdAsc(idProyecto).stream().map(this::toDTO).toList();
     }
 
     @Transactional
     public HitoResponseDTO crear(HitoCreateDTO dto) {
+        if (dto.idProyecto() == null) {
+            throw new BusinessException("El proyecto es obligatorio para registrar un hito");
+        }
+        return crear(dto.idProyecto(), dto);
+    }
+
+    @Transactional
+    public HitoResponseDTO crear(Long idProyecto, HitoCreateDTO dto) {
+        Proyecto proyecto = proyectoRepository.findById(idProyecto)
+            .orElseThrow(() -> new ResourceNotFoundException("Proyecto", idProyecto));
+
         Hito hito = Hito.builder()
             .nombre(dto.nombre())
             .descripcion(dto.descripcion())
             .fechaClave(dto.fechaClave())
             .estado(dto.estado() != null ? dto.estado() : EstadoHito.PENDIENTE)
-            .proyecto(proyectoRepository.findById(dto.idProyecto())
-                .orElseThrow(() -> new ResourceNotFoundException("Proyecto", dto.idProyecto())))
+            .proyecto(proyecto)
             .build();
         return toDTO(hitoRepository.save(hito));
+    }
+
+    @Transactional
+    public HitoResponseDTO actualizar(Long idProyecto, Long id, HitoCreateDTO dto) {
+        Hito hito = hitoRepository.findByIdAndProyectoId(id, idProyecto)
+            .orElseThrow(() -> new ResourceNotFoundException("Hito", id));
+
+        hito.setNombre(dto.nombre());
+        hito.setDescripcion(dto.descripcion());
+        hito.setFechaClave(dto.fechaClave());
+        hito.setEstado(dto.estado() != null ? dto.estado() : EstadoHito.PENDIENTE);
+
+        return toDTO(hito);
+    }
+
+    @Transactional
+    public void eliminar(Long idProyecto, Long id) {
+        Hito hito = hitoRepository.findByIdAndProyectoId(id, idProyecto)
+            .orElseThrow(() -> new ResourceNotFoundException("Hito", id));
+        hitoRepository.delete(hito);
     }
 
     @Transactional
@@ -50,7 +83,14 @@ public class HitoService {
         return new HitoResponseDTO(
             h.getId(), h.getNombre(), h.getDescripcion(),
             h.getFechaClave(), h.getEstado(),
-            h.getProyecto().getId()
+            h.getProyecto().getId(),
+            h.getFechaCreacion(), h.getFechaModificacion()
         );
+    }
+
+    private void validarProyectoExiste(Long idProyecto) {
+        if (!proyectoRepository.existsById(idProyecto)) {
+            throw new ResourceNotFoundException("Proyecto", idProyecto);
+        }
     }
 }

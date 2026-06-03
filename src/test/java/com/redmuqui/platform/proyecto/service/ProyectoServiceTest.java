@@ -4,6 +4,7 @@ import com.redmuqui.platform.common.exception.BusinessException;
 import com.redmuqui.platform.common.exception.ResourceNotFoundException;
 import com.redmuqui.platform.ejetematico.repository.EjeTematicoRepository;
 import com.redmuqui.platform.macroregion.repository.MacroregionRepository;
+import com.redmuqui.platform.institucion.repository.InstitucionRepository;
 import com.redmuqui.platform.proyecto.dto.ProyectoCreateDTO;
 import com.redmuqui.platform.proyecto.dto.ProyectoUpdateDTO;
 import com.redmuqui.platform.proyecto.entity.EstadoProyecto;
@@ -43,6 +44,7 @@ class ProyectoServiceTest {
     @Mock private EjeTematicoRepository ejeTematicoRepository;
     @Mock private UsuarioRepository usuarioRepository;
     @Mock private TerritorioRepository territorioRepository;
+    @Mock private InstitucionRepository institucionRepository;
     @Mock private ProyectoMapper mapper;
 
     @InjectMocks private ProyectoService service;
@@ -52,7 +54,7 @@ class ProyectoServiceTest {
         Pageable pageable = PageRequest.of(0, 10);
         when(proyectoRepository.findAll(anySpecification(), eq(pageable))).thenReturn(Page.empty());
 
-        Page<?> result = service.listar("PRY", EstadoProyecto.EN_CURSO, 1L, 2L, pageable);
+        Page<?> result = service.listar("PRY", EstadoProyecto.ACTIVO, 1L, 2L, null, null, pageable);
 
         assertThat(result.getTotalElements()).isZero();
         verify(proyectoRepository).findAll(anySpecification(), eq(pageable));
@@ -67,7 +69,7 @@ class ProyectoServiceTest {
             "Objetivo",
             LocalDate.of(2026, 5, 12),
             LocalDate.of(2026, 5, 11),
-            EstadoProyecto.PENDIENTE,
+            EstadoProyecto.ACTIVO,
             null,
             null,
             null,
@@ -93,7 +95,7 @@ class ProyectoServiceTest {
             "Objetivo",
             LocalDate.of(2026, 5, 12),
             LocalDate.of(2026, 5, 20),
-            EstadoProyecto.PENDIENTE,
+            EstadoProyecto.ACTIVO,
             null,
             null,
             null,
@@ -117,15 +119,16 @@ class ProyectoServiceTest {
             .nombre("Proyecto existente")
             .codigoInterno("PRY-EXISTENTE")
             .fechaInicio(LocalDate.of(2026, 5, 1))
-            .estado(EstadoProyecto.EN_CURSO)
+            .estado(EstadoProyecto.ACTIVO)
             .build();
         ProyectoUpdateDTO dto = new ProyectoUpdateDTO(
             "Proyecto actualizado",
+            "PRY-ACTUALIZADO",
             "Descripcion",
             "Objetivo",
             LocalDate.of(2026, 5, 12),
             LocalDate.of(2026, 5, 20),
-            EstadoProyecto.EN_CURSO,
+            EstadoProyecto.ACTIVO,
             null,
             101.0,
             null,
@@ -136,6 +139,7 @@ class ProyectoServiceTest {
             null
         );
         when(proyectoRepository.findById(1L)).thenReturn(Optional.of(proyecto));
+        when(proyectoRepository.existsByCodigoInternoIgnoreCaseAndIdNot(dto.codigoInterno(), 1L)).thenReturn(false);
 
         assertThatThrownBy(() -> service.actualizar(1L, dto))
             .isInstanceOf(BusinessException.class)

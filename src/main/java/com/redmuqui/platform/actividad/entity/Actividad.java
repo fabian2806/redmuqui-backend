@@ -9,6 +9,8 @@ import lombok.*;
 import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.List;
+import java.util.ArrayList;
 
 @Entity
 @Table(name = "actividades")
@@ -43,6 +45,14 @@ public class Actividad extends Auditable {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_proyecto", nullable = false)
     private Proyecto proyecto;
+
+    @Column(name = "porcentaje_avance", columnDefinition = "INTEGER DEFAULT 0")
+    @Builder.Default
+    private Integer porcentajeAvance = 0;
+
+    @OneToMany(mappedBy = "actividad", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<Subactividad> subactividades = new ArrayList<>();
 
     /**
      * Responsables de la actividad. Relación N:M con Usuario.

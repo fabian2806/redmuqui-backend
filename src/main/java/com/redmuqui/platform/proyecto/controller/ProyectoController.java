@@ -1,12 +1,17 @@
 package com.redmuqui.platform.proyecto.controller;
 
 import com.redmuqui.platform.common.dto.PageResponse;
+import com.redmuqui.platform.proyecto.dto.AsociarInstitucionesDTO;
 import com.redmuqui.platform.proyecto.dto.EquipoMemberDTO;
+import com.redmuqui.platform.proyecto.dto.InstitucionParticipacionDTO;
 import com.redmuqui.platform.proyecto.dto.ProyectoCreateDTO;
 import com.redmuqui.platform.proyecto.dto.ProyectoResponseDTO;
+import com.redmuqui.platform.proyecto.dto.ProyectoTerritorioRequestDTO;
 import com.redmuqui.platform.proyecto.dto.ProyectoUpdateDTO;
 import com.redmuqui.platform.proyecto.entity.EstadoProyecto;
 import com.redmuqui.platform.proyecto.service.ProyectoService;
+import com.redmuqui.platform.actividad.service.ActividadService;
+import com.redmuqui.platform.actividad.dto.ActividadResponseDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -17,6 +22,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
+import java.util.Map;
 import java.util.Set;
 
 @RestController
@@ -26,18 +32,21 @@ import java.util.Set;
 public class ProyectoController {
 
     private final ProyectoService service;
+    private final ActividadService actividadService;
 
     @GetMapping
-    @Operation(summary = "Listar proyectos paginados con filtros bÃ¡sicos (RF-022)")
+    @Operation(summary = "Listar proyectos paginados con filtros (RF-082 a RF-087)")
     public ResponseEntity<PageResponse<ProyectoResponseDTO>> listar(
         @RequestParam(required = false) String q,
         @RequestParam(required = false) EstadoProyecto estado,
         @RequestParam(required = false) Long idMacroregion,
         @RequestParam(required = false) Long idEjeTematico,
+        @RequestParam(required = false) Long idInstitucion,
+        @RequestParam(required = false) Integer anio,
         Pageable pageable
     ) {
         return ResponseEntity.ok(PageResponse.from(
-            service.listar(q, estado, idMacroregion, idEjeTematico, pageable)
+            service.listar(q, estado, idMacroregion, idEjeTematico, idInstitucion, anio, pageable)
         ));
     }
 
@@ -45,6 +54,13 @@ public class ProyectoController {
     @Operation(summary = "Obtener detalle de un proyecto")
     public ResponseEntity<ProyectoResponseDTO> obtener(@PathVariable Long id) {
         return ResponseEntity.ok(service.obtener(id));
+    }
+
+    @GetMapping("/ultimo-codigo")
+    @Operation(summary = "Obtener el último código de proyecto registrado")
+    public ResponseEntity<Map<String, String>> obtenerUltimoCodigo() {
+        String ultimoCodigo = service.obtenerUltimoCodigo();
+        return ResponseEntity.ok(Map.of("ultimoCodigo", ultimoCodigo != null ? ultimoCodigo : ""));
     }
 
     @PostMapping
@@ -68,11 +84,75 @@ public class ProyectoController {
         return ResponseEntity.ok(service.obtenerEquipo(id));
     }
 
+    @GetMapping("/{id}/actividades")
+    @Operation(summary = "Listar actividades y subactividades de un proyecto")
+    public ResponseEntity<java.util.List<ActividadResponseDTO>> obtenerActividades(@PathVariable Long id) {
+        return ResponseEntity.ok(actividadService.listarPorProyecto(id));
+    }
+
     @PostMapping("/{id}/equipo")
     @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'TECNICO')")
     @Operation(summary = "Agregar miembro al equipo del proyecto")
     public ResponseEntity<Void> agregarMiembro(@PathVariable Long id, @Valid @RequestBody EquipoMemberDTO dto) {
         service.agregarMiembro(id, dto);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/{id}/equipo/{idUsuario}")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'TECNICO')")
+    @Operation(summary = "Eliminar miembro del equipo del proyecto")
+    public ResponseEntity<Void> eliminarMiembro(@PathVariable Long id, @PathVariable Long idUsuario) {
+        service.eliminarMiembro(id, idUsuario);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/{id}/equipo/{idUsuario}")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'TECNICO')")
+    @Operation(summary = "Actualizar rol de miembro del equipo del proyecto")
+    public ResponseEntity<Void> actualizarRolMiembro(@PathVariable Long id, @PathVariable Long idUsuario, @RequestParam String nuevoRol) {
+        service.actualizarRolMiembro(id, idUsuario, nuevoRol);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{id}/estado")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'TECNICO')")
+    @Operation(summary = "Actualizar estado de un proyecto (RF-031)")
+    public ResponseEntity<ProyectoResponseDTO> cambiarEstado(@PathVariable Long id, @RequestParam EstadoProyecto estado) {
+        return ResponseEntity.ok(service.cambiarEstado(id, estado));
+    }
+
+    @PatchMapping("/{id}/avance")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'TECNICO')")
+    @Operation(summary = "Actualizar porcentaje de avance de un proyecto (RF-032)")
+    public ResponseEntity<ProyectoResponseDTO> actualizarAvance(@PathVariable Long id, @RequestParam Double porcentajeAvance) {
+        return ResponseEntity.ok(service.actualizarAvance(id, porcentajeAvance));
+    }
+
+    @GetMapping("/{id}/instituciones")
+    @Operation(summary = "Listar instituciones asociadas al proyecto")
+    public ResponseEntity<Set<InstitucionParticipacionDTO>> obtenerInstituciones(@PathVariable Long id) {
+        return ResponseEntity.ok(service.obtenerInstituciones(id));
+    }
+
+    @PostMapping("/{id}/instituciones")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'TECNICO')")
+    @Operation(summary = "Asociar una o más instituciones miembro a un proyecto")
+    public ResponseEntity<Void> asociarInstituciones(
+        @PathVariable Long id,
+        @Valid @RequestBody AsociarInstitucionesDTO dto
+    ) {
+        service.asociarInstituciones(id, dto);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/territorios")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'TECNICO')")
+    @Operation(summary = "Asociar uno o más territorios a un proyecto")
+    public ResponseEntity<Void> asociarTerritorios(
+        @PathVariable Long id,
+        @Valid @RequestBody ProyectoTerritorioRequestDTO dto
+    ) {
+        service.asociarTerritorios(id, dto);
         return ResponseEntity.noContent().build();
     }
 }
