@@ -1,9 +1,10 @@
 package com.redmuqui.platform.trazabilidad.service;
 
 import com.redmuqui.platform.common.exception.ResourceNotFoundException;
-import com.redmuqui.platform.trazabilidad.dto.BitacoraResponseDTO;
+import com.redmuqui.platform.trazabilidad.dto.BitacoraConsultaDTO;
 import com.redmuqui.platform.trazabilidad.entity.Bitacora;
 import com.redmuqui.platform.trazabilidad.repository.BitacoraRepository;
+import com.redmuqui.platform.usuario.entity.Usuario;
 import com.redmuqui.platform.usuario.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -31,14 +32,17 @@ public class BitacoraService {
     private final UsuarioRepository usuarioRepository;
 
     @Transactional(readOnly = true)
-    public Page<BitacoraResponseDTO> listar(Pageable pageable) {
-        return bitacoraRepository.findAll(pageable).map(this::toDTO);
+    public Page<BitacoraConsultaDTO> consultarGeneral(Pageable pageable) {
+        return bitacoraRepository.findAllByOrderByFechaDesc(pageable).map(this::toConsultaDTO);
     }
 
     @Transactional(readOnly = true)
-    public Page<BitacoraResponseDTO> listarPorEntidad(String entidad, Long idEntidad, Pageable pageable) {
-        return bitacoraRepository.findByEntidadReferenciadaAndIdEntidadRef(entidad, idEntidad, pageable)
-            .map(this::toDTO);
+    public Page<BitacoraConsultaDTO> consultarHistorialEntidad(
+        String entidadReferenciada, Long idEntidadRef, Pageable pageable
+    ) {
+        return bitacoraRepository
+            .findByEntidadReferenciadaAndIdEntidadRefOrderByFechaDesc(entidadReferenciada, idEntidadRef, pageable)
+            .map(this::toConsultaDTO);
     }
 
     /**
@@ -86,12 +90,23 @@ public class BitacoraService {
             .getId();
     }
 
-    private BitacoraResponseDTO toDTO(Bitacora b) {
-        return new BitacoraResponseDTO(
-            b.getId(), b.getTipoAccion(), b.getFecha(), b.getDescripcion(),
-            b.getEntidadReferenciada(), b.getIdEntidadRef(),
-            b.getUsuario() != null ? b.getUsuario().getId() : null,
-            b.getUsuario() != null ? b.getUsuario().getNombres() + " " + b.getUsuario().getApellidos() : null
+    private BitacoraConsultaDTO toConsultaDTO(Bitacora bitacora) {
+        return new BitacoraConsultaDTO(
+            resolverNombreUsuario(bitacora.getUsuario()),
+            bitacora.getDescripcion(),
+            bitacora.getTipoAccion(),
+            bitacora.getFecha()
         );
+    }
+
+    private String resolverNombreUsuario(Usuario usuario) {
+        if (usuario == null) {
+            return null;
+        }
+        String nombres = usuario.getNombres() != null ? usuario.getNombres().trim() : " ";
+        String apellidos = usuario.getApellidos() != null ? usuario.getApellidos().trim() : " ";
+
+        String nombreCompleto = (nombres + " " + apellidos).trim();
+        return nombreCompleto.isBlank() ? usuario.getEmail() : nombreCompleto;
     }
 }

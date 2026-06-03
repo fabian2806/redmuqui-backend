@@ -76,8 +76,14 @@ class BitacoraAspectTest {
     void trasCrearHito_registraEntidadHito() {
         configurarUsuarioAutenticado("tecnico@test.com");
         HitoResponseDTO hito = new HitoResponseDTO(
-            15L, "Entrega informe", "Desc", LocalDate.of(2026, 6, 1),
-            EstadoHito.PENDIENTE, 4L
+                1L,
+                "Nombre del Hito",
+                "Descripción",
+                LocalDate.now(),
+                EstadoHito.PENDIENTE,
+                9L,
+                java.time.LocalDateTime.now(),
+                java.time.LocalDateTime.now()
         );
 
         aspect.trasCrearHito(null, hito);
@@ -85,8 +91,8 @@ class BitacoraAspectTest {
         verify(bitacoraService).registrarEventoAutenticado(
             eq(BitacoraAspect.CREACION),
             eq(BitacoraAspect.ENTIDAD_HITO),
-            eq(15L),
-            contains("Entrega informe")
+            eq(1L),
+            contains("Nombre del Hito")
         );
     }
 
@@ -94,9 +100,16 @@ class BitacoraAspectTest {
     void trasCrearActividad_registraEntidadActividad() {
         configurarUsuarioAutenticado("tecnico@test.com");
         ActividadResponseDTO actividad = new ActividadResponseDTO(
-            20L, "Capacitación", "Desc",
-            LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 10),
-            EstadoActividad.EN_CURSO, 9L, Set.of(1L)
+                20L,
+                "Capacitación",
+                "Desc",
+                LocalDate.of(2026, 6, 1),
+                LocalDate.of(2026, 6, 10),
+                EstadoActividad.EN_CURSO,
+                1,
+                9L,
+                Set.of(1L),
+                java.util.List.of()
         );
 
         aspect.trasCrearActividad(null, actividad);
@@ -156,7 +169,7 @@ class BitacoraAspectTest {
             "Objetivo",
             LocalDate.of(2026, 1, 1),
             LocalDate.of(2026, 12, 31),
-            EstadoProyecto.EN_CURSO,
+            EstadoProyecto.ACTIVO,
             1,
             10.0,
             1000.0,
@@ -166,7 +179,7 @@ class BitacoraAspectTest {
             null,
             null,
             null,
-            Set.of()
+            Set.of(),Set.of()
         );
     }
 
