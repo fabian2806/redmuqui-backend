@@ -19,7 +19,7 @@ public class BitacoraController {
     private final BitacoraService service;
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'COORDINADOR')")
+    @PreAuthorize("hasAuthority('BITACORA_READ')")
     public ResponseEntity<PageResponse<BitacoraResponseDTO>> listar(
         @RequestParam(required = false) String entidad,
         @RequestParam(required = false) Long idEntidad,

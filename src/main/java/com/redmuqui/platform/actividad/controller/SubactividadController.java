@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -19,6 +20,7 @@ public class SubactividadController {
     private final SubactividadService subactividadService;
 
     @PostMapping
+    @PreAuthorize("hasAuthority('PROYECTOS_UPDATE')")
     public ResponseEntity<SubactividadResponseDTO> crear(
             @PathVariable Long actividadId,
             @Valid @RequestBody SubactividadCreateDTO dto) {
@@ -27,6 +29,7 @@ public class SubactividadController {
     }
 
     @PostMapping("/{subactividadId}/cofinanciamientos")
+    @PreAuthorize("hasAuthority('PROYECTOS_UPDATE')")
     public ResponseEntity<SubactividadResponseDTO> cofinanciar(
             @PathVariable Long subactividadId,
             @Valid @RequestBody SubactividadCofinanciamientoCreateDTO dto) {
@@ -34,6 +37,7 @@ public class SubactividadController {
     }
 
     @PostMapping("/{subactividadId}/evidencias")
+    @PreAuthorize("hasAuthority('PROYECTOS_UPDATE')")
     public ResponseEntity<SubactividadResponseDTO> subirEvidencia(
             @PathVariable Long subactividadId,
             @RequestParam(required = false) MultipartFile file,

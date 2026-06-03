@@ -21,20 +21,20 @@ public class RolController {
     private final RolService service;
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize("hasAuthority('USUARIOS_READ')")
     @Operation(summary = "Listar roles del sistema")
     public ResponseEntity<List<RolDTO>> listar() {
         return ResponseEntity.ok(service.listar());
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize("hasAuthority('USUARIOS_READ')")
     public ResponseEntity<RolDTO> obtener(@PathVariable Long id) {
         return ResponseEntity.ok(service.obtener(id));
     }
 
     @GetMapping("/{id}/permisos")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize("hasAuthority('USUARIOS_READ')")
     @Operation(summary = "Permisos asociados a un rol (RF-017)")
     public ResponseEntity<List<PermisoDTO>> obtenerPermisos(@PathVariable Long id) {
         return ResponseEntity.ok(service.obtenerPermisos(id));

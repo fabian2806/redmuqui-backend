@@ -26,6 +26,7 @@ public class ObservacionController {
     private final UsuarioRepository usuarioRepository;
 
     @GetMapping
+    @PreAuthorize("hasAuthority('BITACORA_READ')")
     public ResponseEntity<List<ObservacionResponseDTO>> listarPorEntidad(
         @RequestParam String entidad,
         @RequestParam Long idEntidad
@@ -34,7 +35,7 @@ public class ObservacionController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'TECNICO', 'COORDINADOR')")
+    @PreAuthorize("hasAuthority('BITACORA_READ')")
     public ResponseEntity<ObservacionResponseDTO> crear(
         @Valid @RequestBody ObservacionCreateDTO dto,
         @AuthenticationPrincipal UserDetails userDetails
@@ -45,7 +46,7 @@ public class ObservacionController {
     }
 
     @PatchMapping("/{id}/estado")
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'COORDINADOR')")
+    @PreAuthorize("hasAuthority('DOCUMENTOS_VALIDATE')")
     public ResponseEntity<ObservacionResponseDTO> cambiarEstado(@PathVariable Long id, @RequestParam EstadoObservacion estado) {
         return ResponseEntity.ok(service.cambiarEstado(id, estado));
     }

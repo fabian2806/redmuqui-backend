@@ -25,6 +25,7 @@ public class ActividadController {
     private final ActividadService service;
 
     @GetMapping
+    @PreAuthorize("hasAuthority('PROYECTOS_READ')")
     public ResponseEntity<PageResponse<ActividadResponseDTO>> listar(
             @RequestParam(required = false) Long proyectoId,
             Pageable pageable) {
@@ -32,31 +33,32 @@ public class ActividadController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('PROYECTOS_READ')")
     public ResponseEntity<ActividadResponseDTO> obtener(@PathVariable Long id) {
         return ResponseEntity.ok(service.obtener(id));
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'TECNICO')")
+    @PreAuthorize("hasAuthority('PROYECTOS_UPDATE')")
     public ResponseEntity<ActividadResponseDTO> crear(@Valid @RequestBody ActividadCreateDTO dto) {
         ActividadResponseDTO creado = service.crear(dto);
         return ResponseEntity.created(URI.create("/api/v1/actividades/" + creado.id())).body(creado);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'TECNICO')")
+    @PreAuthorize("hasAuthority('PROYECTOS_UPDATE')")
     public ResponseEntity<ActividadResponseDTO> actualizar(@PathVariable Long id, @Valid @RequestBody ActividadUpdateDTO dto) {
         return ResponseEntity.ok(service.actualizar(id, dto));
     }
 
     @PatchMapping("/{id}/estado")
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'TECNICO')")
+    @PreAuthorize("hasAuthority('PROYECTOS_UPDATE')")
     public ResponseEntity<ActividadResponseDTO> cambiarEstado(@PathVariable Long id, @RequestParam EstadoActividad estado) {
         return ResponseEntity.ok(service.cambiarEstado(id, estado));
     }
 
     @PatchMapping("/{id}/avance")
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'TECNICO')")
+    @PreAuthorize("hasAuthority('PROYECTOS_UPDATE')")
     public ResponseEntity<ActividadResponseDTO> actualizarAvance(@PathVariable Long id, @RequestParam Integer porcentajeAvance) {
         return ResponseEntity.ok(service.actualizarAvance(id, porcentajeAvance));
     }

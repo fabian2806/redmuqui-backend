@@ -23,12 +23,13 @@ public class HitoController {
     private final HitoService service;
 
     @GetMapping("/proyectos/{idProyecto}/hitos")
+    @PreAuthorize("hasAuthority('PROYECTOS_READ')")
     public ResponseEntity<List<HitoResponseDTO>> listarPorProyectoPath(@PathVariable Long idProyecto) {
         return ResponseEntity.ok(service.listarPorProyecto(idProyecto));
     }
 
     @PostMapping("/proyectos/{idProyecto}/hitos")
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'TECNICO')")
+    @PreAuthorize("hasAuthority('PROYECTOS_UPDATE')")
     public ResponseEntity<HitoResponseDTO> crearEnProyecto(
         @PathVariable Long idProyecto,
         @Valid @RequestBody HitoCreateDTO dto
@@ -38,7 +39,7 @@ public class HitoController {
     }
 
     @PutMapping("/proyectos/{idProyecto}/hitos/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'TECNICO')")
+    @PreAuthorize("hasAuthority('PROYECTOS_UPDATE')")
     public ResponseEntity<HitoResponseDTO> actualizar(
         @PathVariable Long idProyecto,
         @PathVariable Long id,
@@ -48,26 +49,27 @@ public class HitoController {
     }
 
     @DeleteMapping("/proyectos/{idProyecto}/hitos/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'TECNICO')")
+    @PreAuthorize("hasAuthority('PROYECTOS_UPDATE')")
     public ResponseEntity<Void> eliminar(@PathVariable Long idProyecto, @PathVariable Long id) {
         service.eliminar(idProyecto, id);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/hitos")
+    @PreAuthorize("hasAuthority('PROYECTOS_READ')")
     public ResponseEntity<List<HitoResponseDTO>> listarPorProyecto(@RequestParam Long idProyecto) {
         return ResponseEntity.ok(service.listarPorProyecto(idProyecto));
     }
 
     @PostMapping("/hitos")
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'TECNICO')")
+    @PreAuthorize("hasAuthority('PROYECTOS_UPDATE')")
     public ResponseEntity<HitoResponseDTO> crear(@Valid @RequestBody HitoCreateDTO dto) {
         HitoResponseDTO creado = service.crear(dto);
         return ResponseEntity.created(URI.create("/api/v1/hitos/" + creado.id())).body(creado);
     }
 
     @PatchMapping("/hitos/{id}/estado")
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'TECNICO')")
+    @PreAuthorize("hasAuthority('PROYECTOS_UPDATE')")
     public ResponseEntity<HitoResponseDTO> cambiarEstado(@PathVariable Long id, @RequestParam EstadoHito estado) {
         return ResponseEntity.ok(service.cambiarEstado(id, estado));
     }

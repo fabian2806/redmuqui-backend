@@ -26,30 +26,32 @@ public abstract class BaseCatalogoController<D extends BaseCatalogoDTO> {
     protected abstract String getRutaBase();
 
     @GetMapping
+    @PreAuthorize("hasAuthority('CATALOGOS_READ')")
     public ResponseEntity<List<D>> listar() {
         return ResponseEntity.ok(service.listar());
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('CATALOGOS_READ')")
     public ResponseEntity<D> obtener(@PathVariable Long id) {
         return ResponseEntity.ok(service.obtener(id));
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize("hasAuthority('CATALOGOS_MANAGE')")
     public ResponseEntity<D> crear(@Valid @RequestBody D dto) {
         D creado = service.crear(dto);
         return ResponseEntity.created(URI.create(getRutaBase() + "/" + creado.id())).body(creado);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize("hasAuthority('CATALOGOS_MANAGE')")
     public ResponseEntity<D> actualizar(@PathVariable Long id, @Valid @RequestBody D dto) {
         return ResponseEntity.ok(service.actualizar(id, dto));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize("hasAuthority('CATALOGOS_MANAGE')")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         service.eliminar(id);
         return ResponseEntity.noContent().build();

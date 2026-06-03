@@ -34,6 +34,7 @@ public class ProyectoController {
     private final ActividadService actividadService;
 
     @GetMapping
+    @PreAuthorize("hasAuthority('PROYECTOS_READ')")
     @Operation(summary = "Listar proyectos paginados con filtros (RF-082 a RF-087)")
     public ResponseEntity<PageResponse<ProyectoResponseDTO>> listar(
         @RequestParam(required = false) String q,
@@ -50,13 +51,14 @@ public class ProyectoController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('PROYECTOS_READ')")
     @Operation(summary = "Obtener detalle de un proyecto")
     public ResponseEntity<ProyectoResponseDTO> obtener(@PathVariable Long id) {
         return ResponseEntity.ok(service.obtener(id));
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'TECNICO')")
+    @PreAuthorize("hasAuthority('PROYECTOS_CREATE')")
     @Operation(summary = "Crear un nuevo proyecto (RF-019, RF-020)")
     public ResponseEntity<ProyectoResponseDTO> crear(@Valid @RequestBody ProyectoCreateDTO dto) {
         ProyectoResponseDTO creado = service.crear(dto);
@@ -64,26 +66,28 @@ public class ProyectoController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'TECNICO')")
+    @PreAuthorize("hasAuthority('PROYECTOS_UPDATE')")
     @Operation(summary = "Actualizar un proyecto (RF-021)")
     public ResponseEntity<ProyectoResponseDTO> actualizar(@PathVariable Long id, @Valid @RequestBody ProyectoUpdateDTO dto) {
         return ResponseEntity.ok(service.actualizar(id, dto));
     }
 
     @GetMapping("/{id}/equipo")
+    @PreAuthorize("hasAuthority('PROYECTOS_READ')")
     @Operation(summary = "Listar miembros del equipo del proyecto")
     public ResponseEntity<Set<EquipoMemberDTO>> obtenerEquipo(@PathVariable Long id) {
         return ResponseEntity.ok(service.obtenerEquipo(id));
     }
 
     @GetMapping("/{id}/actividades")
+    @PreAuthorize("hasAuthority('PROYECTOS_READ')")
     @Operation(summary = "Listar actividades y subactividades de un proyecto")
     public ResponseEntity<java.util.List<ActividadResponseDTO>> obtenerActividades(@PathVariable Long id) {
         return ResponseEntity.ok(actividadService.listarPorProyecto(id));
     }
 
     @PostMapping("/{id}/equipo")
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'TECNICO')")
+    @PreAuthorize("hasAuthority('PROYECTOS_UPDATE')")
     @Operation(summary = "Agregar miembro al equipo del proyecto")
     public ResponseEntity<Void> agregarMiembro(@PathVariable Long id, @Valid @RequestBody EquipoMemberDTO dto) {
         service.agregarMiembro(id, dto);
@@ -91,7 +95,7 @@ public class ProyectoController {
     }
 
     @DeleteMapping("/{id}/equipo/{idUsuario}")
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'TECNICO')")
+    @PreAuthorize("hasAuthority('PROYECTOS_UPDATE')")
     @Operation(summary = "Eliminar miembro del equipo del proyecto")
     public ResponseEntity<Void> eliminarMiembro(@PathVariable Long id, @PathVariable Long idUsuario) {
         service.eliminarMiembro(id, idUsuario);
@@ -99,7 +103,7 @@ public class ProyectoController {
     }
 
     @PutMapping("/{id}/equipo/{idUsuario}")
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'TECNICO')")
+    @PreAuthorize("hasAuthority('PROYECTOS_UPDATE')")
     @Operation(summary = "Actualizar rol de miembro del equipo del proyecto")
     public ResponseEntity<Void> actualizarRolMiembro(@PathVariable Long id, @PathVariable Long idUsuario, @RequestParam String nuevoRol) {
         service.actualizarRolMiembro(id, idUsuario, nuevoRol);
@@ -107,27 +111,28 @@ public class ProyectoController {
     }
 
     @PatchMapping("/{id}/estado")
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'TECNICO')")
+    @PreAuthorize("hasAuthority('PROYECTOS_UPDATE')")
     @Operation(summary = "Actualizar estado de un proyecto (RF-031)")
     public ResponseEntity<ProyectoResponseDTO> cambiarEstado(@PathVariable Long id, @RequestParam EstadoProyecto estado) {
         return ResponseEntity.ok(service.cambiarEstado(id, estado));
     }
 
     @PatchMapping("/{id}/avance")
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'TECNICO')")
+    @PreAuthorize("hasAuthority('PROYECTOS_UPDATE')")
     @Operation(summary = "Actualizar porcentaje de avance de un proyecto (RF-032)")
     public ResponseEntity<ProyectoResponseDTO> actualizarAvance(@PathVariable Long id, @RequestParam Double porcentajeAvance) {
         return ResponseEntity.ok(service.actualizarAvance(id, porcentajeAvance));
     }
 
     @GetMapping("/{id}/instituciones")
+    @PreAuthorize("hasAuthority('PROYECTOS_READ')")
     @Operation(summary = "Listar instituciones asociadas al proyecto")
     public ResponseEntity<Set<InstitucionParticipacionDTO>> obtenerInstituciones(@PathVariable Long id) {
         return ResponseEntity.ok(service.obtenerInstituciones(id));
     }
 
     @PostMapping("/{id}/instituciones")
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'TECNICO')")
+    @PreAuthorize("hasAuthority('PROYECTOS_UPDATE')")
     @Operation(summary = "Asociar una o más instituciones miembro a un proyecto")
     public ResponseEntity<Void> asociarInstituciones(
         @PathVariable Long id,
@@ -138,7 +143,7 @@ public class ProyectoController {
     }
 
     @PostMapping("/{id}/territorios")
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'TECNICO')")
+    @PreAuthorize("hasAuthority('PROYECTOS_UPDATE')")
     @Operation(summary = "Asociar uno o más territorios a un proyecto")
     public ResponseEntity<Void> asociarTerritorios(
         @PathVariable Long id,
