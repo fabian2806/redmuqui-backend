@@ -33,8 +33,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
@@ -43,6 +43,13 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class ProyectoService {
+
+    private static final Set<String> ROLES_PROYECTO_PERMITIDOS = Set.of(
+        "Equipo Técnico",
+        "Coordinador",
+        "Asesor",
+        "Observador"
+    );
 
     private final ProyectoRepository proyectoRepository;
     private final MacroregionRepository macroregionRepository;
@@ -73,6 +80,13 @@ public class ProyectoService {
         return mapper.toResponseDTO(buscarOFallar(id));
     }
 
+    @Transactional(readOnly = true)
+    public String obtenerUltimoCodigo() {
+        return proyectoRepository.findTopByOrderByIdDesc()
+            .map(Proyecto::getCodigoInterno)
+            .orElse(null);
+    }
+
     @Transactional
     public ProyectoResponseDTO crear(ProyectoCreateDTO dto) {
         if (proyectoRepository.existsByCodigoInternoIgnoreCase(dto.codigoInterno())) {
@@ -88,7 +102,7 @@ public class ProyectoService {
             .objetivoGeneral(dto.objetivoGeneral())
             .fechaInicio(dto.fechaInicio())
             .fechaFinEstimada(dto.fechaFinEstimada())
-            .estado(dto.estado() != null ? dto.estado() : EstadoProyecto.PENDIENTE)
+            .estado(dto.estado() != null ? dto.estado() : EstadoProyecto.ACTIVO)
             .nivelPrioridad(dto.nivelPrioridad())
             .presupuesto(dto.presupuesto())
             .porcentajeAvance(0.0)
@@ -117,10 +131,15 @@ public class ProyectoService {
     public ProyectoResponseDTO actualizar(Long id, ProyectoUpdateDTO dto) {
         Proyecto proyecto = buscarOFallar(id);
 
+        if (proyectoRepository.existsByCodigoInternoIgnoreCaseAndIdNot(dto.codigoInterno(), id)) {
+            throw new DuplicateResourceException("Ya existe un proyecto con código: " + dto.codigoInterno());
+        }
+
         validarRangoFechas(dto.fechaInicio(), dto.fechaFinEstimada());
         validarPorcentajeAvance(dto.porcentajeAvance());
 
         proyecto.setNombre(dto.nombre());
+        proyecto.setCodigoInterno(dto.codigoInterno());
         proyecto.setDescripcion(dto.descripcion());
         proyecto.setObjetivoGeneral(dto.objetivoGeneral());
         proyecto.setFechaInicio(dto.fechaInicio());
@@ -150,8 +169,15 @@ public class ProyectoService {
     @Transactional
     public void agregarMiembro(Long idProyecto, EquipoMemberDTO dto) {
         Proyecto proyecto = buscarOFallar(idProyecto);
+        validarRolProyecto(dto.rolEnProyecto());
         var usuario = usuarioRepository.findById(dto.idUsuario())
             .orElseThrow(() -> new ResourceNotFoundException("Usuario", dto.idUsuario()));
+
+        boolean yaExiste = proyecto.getEquipo().stream()
+            .anyMatch(pe -> pe.getUsuario().getId().equals(dto.idUsuario()));
+        if (yaExiste) {
+            throw new BusinessException("El usuario ya es miembro del proyecto");
+        }
 
         ProyectoEquipo miembro = ProyectoEquipo.builder()
             .proyecto(proyecto)
@@ -195,23 +221,39 @@ public class ProyectoService {
     @Transactional
     public void asociarInstituciones(Long idProyecto, AsociarInstitucionesDTO dto) {
         Proyecto proyecto = buscarOFallar(idProyecto);
-        Map<Long, Institucion> instituciones = cargarInstitucionesOFallar(
-            dto.getInstituciones().stream()
-                .map(InstitucionParticipacionDTO::getIdInstitucion)
-                .collect(Collectors.toSet())
+
+        Map<Long, InstitucionParticipacionDTO> solicitudesPorInstitucion = dto.getInstituciones().stream()
+            .collect(Collectors.toMap(
+                InstitucionParticipacionDTO::getIdInstitucion,
+                Function.identity(),
+                (primera, duplicada) -> duplicada,
+                LinkedHashMap::new
+            ));
+
+        Map<Long, Institucion> instituciones = cargarInstitucionesOFallar(solicitudesPorInstitucion.keySet());
+
+        proyecto.getInstituciones().removeIf(asociacion ->
+            !solicitudesPorInstitucion.containsKey(asociacion.getInstitucion().getId())
         );
 
-        for (InstitucionParticipacionDTO item : dto.getInstituciones()) {
-            ProyectoInstitucion asociacion = new ProyectoInstitucion();
-            asociacion.setProyecto(proyecto);
-            asociacion.setInstitucion(instituciones.get(item.getIdInstitucion()));
+        Map<Long, ProyectoInstitucion> asociacionesActuales = proyecto.getInstituciones().stream()
+            .collect(Collectors.toMap(pi -> pi.getInstitucion().getId(), Function.identity()));
+
+        for (InstitucionParticipacionDTO item : solicitudesPorInstitucion.values()) {
+            ProyectoInstitucion asociacion = asociacionesActuales.get(item.getIdInstitucion());
+            if (asociacion == null) {
+                asociacion = new ProyectoInstitucion();
+                asociacion.setProyecto(proyecto);
+                asociacion.setInstitucion(instituciones.get(item.getIdInstitucion()));
+                proyecto.getInstituciones().add(asociacion);
+            }
             asociacion.setTipoParticipacion(item.getTipoParticipacion());
-            proyecto.getInstituciones().add(asociacion);
         }
     }
 
     @Transactional
     public void actualizarRolMiembro(Long idProyecto, Long idUsuario, String nuevoRol) {
+        validarRolProyecto(nuevoRol);
         Proyecto proyecto = buscarOFallar(idProyecto);
         ProyectoEquipo miembro = proyecto.getEquipo().stream()
             .filter(pe -> pe.getUsuario().getId().equals(idUsuario))
@@ -256,6 +298,15 @@ public class ProyectoService {
     private void validarPorcentajeAvance(Double porcentajeAvance) {
         if (porcentajeAvance != null && (porcentajeAvance < 0 || porcentajeAvance > 100)) {
             throw new BusinessException("El porcentaje de avance debe estar entre 0 y 100");
+        }
+    }
+
+    private void validarRolProyecto(String rolEnProyecto) {
+        if (rolEnProyecto == null || rolEnProyecto.isBlank()) {
+            throw new BusinessException("El rol en el proyecto es obligatorio");
+        }
+        if (!ROLES_PROYECTO_PERMITIDOS.contains(rolEnProyecto)) {
+            throw new BusinessException("El rol en el proyecto no es válido");
         }
     }
 

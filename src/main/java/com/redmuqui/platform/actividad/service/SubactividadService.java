@@ -53,6 +53,33 @@ public class SubactividadService {
     }
 
     @Transactional
+    public SubactividadResponseDTO actualizar(Long subactividadId, SubactividadCreateDTO dto) {
+        Subactividad s = subactividadRepository.findById(subactividadId)
+            .orElseThrow(() -> new ResourceNotFoundException("Subactividad", subactividadId));
+
+        s.setNombre(dto.nombre());
+        s.setDescripcion(dto.descripcion());
+        if (dto.idResponsable() != null) {
+            s.setResponsable(usuarioRepository.findById(dto.idResponsable())
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario", dto.idResponsable())));
+        }
+        s.setPresupuesto(dto.presupuesto() != null ? dto.presupuesto() : 0.0);
+        s.setHombresInvolucrados(dto.hombresInvolucrados() != null ? dto.hombresInvolucrados() : 0);
+        s.setMujeresInvolucradas(dto.mujeresInvolucradas() != null ? dto.mujeresInvolucradas() : 0);
+        s.setFechaInicio(dto.fechaInicio());
+        s.setFechaFin(dto.fechaFin());
+
+        return toDTO(subactividadRepository.save(s));
+    }
+
+    @Transactional
+    public void eliminar(Long subactividadId) {
+        Subactividad s = subactividadRepository.findById(subactividadId)
+            .orElseThrow(() -> new ResourceNotFoundException("Subactividad", subactividadId));
+        subactividadRepository.delete(s);
+    }
+
+    @Transactional
     public SubactividadResponseDTO cofinanciar(Long subactividadId, SubactividadCofinanciamientoCreateDTO dto) {
         Subactividad subactividad = subactividadRepository.findById(subactividadId)
             .orElseThrow(() -> new ResourceNotFoundException("Subactividad", subactividadId));

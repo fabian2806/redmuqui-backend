@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -24,6 +25,22 @@ public class SubactividadController {
             @Valid @RequestBody SubactividadCreateDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(subactividadService.crear(actividadId, dto));
+    }
+
+    @PutMapping("/{subactividadId}")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'TECNICO')")
+    public ResponseEntity<SubactividadResponseDTO> actualizar(
+            @PathVariable Long actividadId,
+            @PathVariable Long subactividadId,
+            @Valid @RequestBody SubactividadCreateDTO dto) {
+        return ResponseEntity.ok(subactividadService.actualizar(subactividadId, dto));
+    }
+
+    @DeleteMapping("/{subactividadId}")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'TECNICO')")
+    public ResponseEntity<Void> eliminar(@PathVariable Long subactividadId) {
+        subactividadService.eliminar(subactividadId);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{subactividadId}/cofinanciamientos")

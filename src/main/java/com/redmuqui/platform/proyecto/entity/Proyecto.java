@@ -49,7 +49,7 @@ public class Proyecto extends Auditable {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     @Builder.Default
-    private EstadoProyecto estado = EstadoProyecto.PENDIENTE;
+    private EstadoProyecto estado = EstadoProyecto.ACTIVO;
 
     @Column(name = "nivel_prioridad")
     private Integer nivelPrioridad;
