@@ -80,6 +80,13 @@ public class ProyectoService {
         return mapper.toResponseDTO(buscarOFallar(id));
     }
 
+    @Transactional(readOnly = true)
+    public String obtenerUltimoCodigo() {
+        return proyectoRepository.findTopByOrderByIdDesc()
+            .map(Proyecto::getCodigoInterno)
+            .orElse(null);
+    }
+
     @Transactional
     public ProyectoResponseDTO crear(ProyectoCreateDTO dto) {
         if (proyectoRepository.existsByCodigoInternoIgnoreCase(dto.codigoInterno())) {

@@ -22,6 +22,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
+import java.util.Map;
 import java.util.Set;
 
 @RestController
@@ -53,6 +54,13 @@ public class ProyectoController {
     @Operation(summary = "Obtener detalle de un proyecto")
     public ResponseEntity<ProyectoResponseDTO> obtener(@PathVariable Long id) {
         return ResponseEntity.ok(service.obtener(id));
+    }
+
+    @GetMapping("/ultimo-codigo")
+    @Operation(summary = "Obtener el último código de proyecto registrado")
+    public ResponseEntity<Map<String, String>> obtenerUltimoCodigo() {
+        String ultimoCodigo = service.obtenerUltimoCodigo();
+        return ResponseEntity.ok(Map.of("ultimoCodigo", ultimoCodigo != null ? ultimoCodigo : ""));
     }
 
     @PostMapping

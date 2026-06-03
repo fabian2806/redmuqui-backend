@@ -12,4 +12,5 @@ public interface ProyectoRepository extends JpaRepository<Proyecto, Long>, JpaSp
     Optional<Proyecto> findByCodigoInternoIgnoreCase(String codigoInterno);
     boolean existsByCodigoInternoIgnoreCase(String codigoInterno);
     boolean existsByCodigoInternoIgnoreCaseAndIdNot(String codigoInterno, Long id);
+    Optional<Proyecto> findTopByOrderByIdDesc();
 }
