@@ -31,9 +31,19 @@ public class AuthController {
 
     @PostMapping("/logout")
     @Operation(summary = "Cerrar sesión (RF-009)")
-    public ResponseEntity<Void> logout(@Valid @RequestBody RefreshTokenRequest request) {
-        authService.logout(request.refreshToken());
+    public ResponseEntity<Void> logout(
+        @Valid @RequestBody RefreshTokenRequest request,
+        @RequestHeader(value = "Authorization", required = false) String authorizationHeader
+    ) {
+        authService.logout(request.refreshToken(), extractBearerToken(authorizationHeader));
         return ResponseEntity.noContent().build();
+    }
+
+    private String extractBearerToken(String authorizationHeader) {
+        if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+            return null;
+        }
+        return authorizationHeader.substring("Bearer ".length());
     }
 
     @PostMapping("/recover")
