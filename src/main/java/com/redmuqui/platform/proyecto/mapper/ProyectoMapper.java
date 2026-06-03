@@ -45,8 +45,16 @@ public class ProyectoMapper {
                     p.getResponsablePrincipal().getEmail())
                 : null,
             p.getTerritorios().stream()
+                .sorted(Comparator.comparing(t -> t.getId()))
                 .map(t -> new ProyectoResponseDTO.TerritorioRefDTO(t.getId(), t.getNombre()))
-                .collect(Collectors.toSet())
+                .collect(Collectors.toCollection(LinkedHashSet::new)),
+            p.getInstituciones().stream()
+                .sorted(Comparator.comparing(pi -> pi.getInstitucion().getId()))
+                .map(pi -> new ProyectoResponseDTO.InstitucionRefDTO(
+                    pi.getInstitucion().getId(),
+                    pi.getInstitucion().getNombre(),
+                    pi.getTipoParticipacion()))
+                .collect(Collectors.toCollection(LinkedHashSet::new))
         );
     }
 

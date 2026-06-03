@@ -28,6 +28,22 @@ public class SubactividadController {
                 .body(subactividadService.crear(actividadId, dto));
     }
 
+    @PutMapping("/{subactividadId}")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'TECNICO')")
+    public ResponseEntity<SubactividadResponseDTO> actualizar(
+            @PathVariable Long actividadId,
+            @PathVariable Long subactividadId,
+            @Valid @RequestBody SubactividadCreateDTO dto) {
+        return ResponseEntity.ok(subactividadService.actualizar(subactividadId, dto));
+    }
+
+    @DeleteMapping("/{subactividadId}")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'TECNICO')")
+    public ResponseEntity<Void> eliminar(@PathVariable Long subactividadId) {
+        subactividadService.eliminar(subactividadId);
+        return ResponseEntity.noContent().build();
+    }
+
     @PostMapping("/{subactividadId}/cofinanciamientos")
     @PreAuthorize("hasAuthority('PROYECTOS_UPDATE')")
     public ResponseEntity<SubactividadResponseDTO> cofinanciar(
