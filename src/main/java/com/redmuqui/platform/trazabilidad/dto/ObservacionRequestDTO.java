@@ -3,8 +3,8 @@ package com.redmuqui.platform.trazabilidad.dto;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
-public record ObservacionCreateDTO(
+public record ObservacionRequestDTO(
     @NotBlank String descripcion,
     @NotBlank String entidadReferenciada,
-    @NotNull Long idEntidadRef
+    @NotNull Long idEntidadReferenciada
 ) {}
