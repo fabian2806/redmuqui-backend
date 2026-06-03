@@ -99,6 +99,12 @@ public class ActividadService {
     }
 
     @Transactional
+    public void eliminar(Long id) {
+        Actividad a = buscarOFallar(id);
+        actividadRepository.delete(a);
+    }
+
+    @Transactional
     public ActividadResponseDTO actualizarAvance(Long id, Integer porcentajeAvance) {
         Actividad a = buscarOFallar(id);
         a.setPorcentajeAvance(porcentajeAvance);
