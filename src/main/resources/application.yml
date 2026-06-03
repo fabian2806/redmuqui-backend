@@ -5,9 +5,9 @@ spring:
     active: ${SPRING_PROFILES_ACTIVE:dev}
 
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:redmuqui_dev}
-    username: ${DB_USER:redmuqui}
-    password: ${DB_PASSWORD:redmuqui}
+    url: jdbc:postgresql://${DB_HOST:prueba-redmuqui.crxcfp96qlvj.us-east-1.rds.amazonaws.com}:${DB_PORT:5432}/${DB_NAME:redmuqui_dev}
+    username: ${DB_USER:postgree}
+    password: ${DB_PASSWORD:postgree1234}
     driver-class-name: org.postgresql.Driver
 
   jpa:

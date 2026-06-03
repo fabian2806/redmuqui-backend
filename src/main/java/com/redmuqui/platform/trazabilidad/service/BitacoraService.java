@@ -8,7 +8,11 @@ import com.redmuqui.platform.usuario.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
@@ -41,7 +45,7 @@ public class BitacoraService {
      * Registra un evento en la bitácora. Pensado para ser llamado desde otros services
      * tras ejecutar acciones relevantes.
      */
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void registrarEvento(String tipoAccion, String entidad, Long idEntidad,
                                  String descripcion, Long idUsuario) {
         Bitacora bitacora = Bitacora.builder()
@@ -54,6 +58,32 @@ public class BitacoraService {
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario", idUsuario)))
             .build();
         bitacoraRepository.save(bitacora);
+    }
+
+    /**
+     * Registra un evento usando el usuario autenticado del {@link SecurityContextHolder}
+     * (poblado por {@link com.redmuqui.platform.auth.filter.JwtAuthenticationFilter}).
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void registrarEventoAutenticado(String tipoAccion, String entidad, Long idEntidad,
+                                           String descripcion) {
+        registrarEvento(tipoAccion, entidad, idEntidad, descripcion, resolverIdUsuarioAutenticado());
+    }
+
+    Long resolverIdUsuarioAutenticado() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new IllegalStateException("No hay usuario autenticado en el contexto de seguridad");
+        }
+
+        Object principal = authentication.getPrincipal();
+        if (!(principal instanceof UserDetails userDetails)) {
+            throw new IllegalStateException("El principal de autenticación no es un UserDetails válido");
+        }
+
+        return usuarioRepository.findByEmailIgnoreCase(userDetails.getUsername())
+            .orElseThrow(() -> new ResourceNotFoundException("Usuario", userDetails.getUsername()))
+            .getId();
     }
 
     private BitacoraResponseDTO toDTO(Bitacora b) {
