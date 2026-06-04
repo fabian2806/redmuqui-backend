@@ -87,4 +87,8 @@ public class Documento extends Auditable {
     @OneToMany(mappedBy = "documento", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private Set<Archivo> archivos = new HashSet<>();
+
+    @OneToMany(mappedBy = "documento", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private Set<EnlaceDocumento> enlaces = new HashSet<>();
 }

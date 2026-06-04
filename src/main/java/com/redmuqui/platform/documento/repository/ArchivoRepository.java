@@ -8,5 +8,5 @@ import java.util.List;
 
 @Repository
 public interface ArchivoRepository extends JpaRepository<Archivo, Long> {
-    List<Archivo> findByDocumentoId(Long idDocumento);
+    List<Archivo> findByDocumentoIdOrderByFechaCreacionDesc(Long idDocumento);
 }

@@ -1,11 +1,14 @@
 package com.redmuqui.platform.documento.dto;
 
-import jakarta.validation.constraints.NotBlank;
+import java.time.LocalDateTime;
 
 public record ArchivoDTO(
     Long id,
-    @NotBlank String nombre,
-    @NotBlank String url,
-    String extension,
+    String nombreArchivo,
+    String rutaArchivo,
+    String tipoArchivo,
+    String descripcion,
+    Long tamanioArchivo,
+    LocalDateTime fechaRegistro,
     Long idDocumento
 ) {}

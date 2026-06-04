@@ -30,6 +30,13 @@ public class Archivo extends Auditable {
     @Column(length = 20)
     private String extension;
 
+    @Column(columnDefinition = "TEXT")
+    private String descripcion;
+
+    @Column(name = "tamanio_archivo", nullable = false)
+    @Builder.Default
+    private Long tamanioArchivo = 0L;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_documento", nullable = false)
     private Documento documento;
