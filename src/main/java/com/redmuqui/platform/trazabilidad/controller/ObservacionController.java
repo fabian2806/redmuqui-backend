@@ -42,9 +42,4 @@ public class ObservacionController {
         );
     }
 
-    @PatchMapping("/{id}/estado")
-    @PreAuthorize("hasAuthority('DOCUMENTOS_VALIDATE')")
-    public ResponseEntity<ObservacionResponseDTO> cambiarEstado(@PathVariable Long id, @RequestParam EstadoObservacion estado) {
-        return ResponseEntity.ok(service.cambiarEstado(id, estado));
-    }
 }

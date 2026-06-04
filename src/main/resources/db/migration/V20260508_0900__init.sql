@@ -110,7 +110,7 @@ CREATE TABLE proyectos (
     objetivo_general         TEXT,
     fecha_inicio             DATE         NOT NULL,
     fecha_fin_estimada       DATE,
-    estado                   VARCHAR(30)  NOT NULL DEFAULT 'ACTIVO',
+    estado                   VARCHAR(30)  NOT NULL DEFAULT 'PENDIENTE',
     nivel_prioridad          INTEGER,
     porcentaje_avance        DOUBLE PRECISION DEFAULT 0,
     presupuesto              DOUBLE PRECISION,
