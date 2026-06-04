@@ -10,7 +10,8 @@ public record ObservacionResponseDTO(
     LocalDateTime fecha,
     EstadoObservacion estado,
     String entidadReferenciada,
-    Long idEntidadRef,
+    Long idEntidadReferenciada,
     Long idUsuario,
-    String nombreUsuario
+    String nombreUsuario,
+    String emailUsuario
 ) {}
