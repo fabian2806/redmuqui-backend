@@ -38,16 +38,4 @@ public class BitacoraController {
             PageResponse.from(service.consultarHistorialEntidad(entidadReferenciada, idEntidadRef, pageable))
         );
     }
-
-    @GetMapping
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'COORDINADOR')")
-    public ResponseEntity<PageResponse<BitacoraResponseDTO>> listar(
-        @RequestParam(required = false) String entidad,
-        @RequestParam(required = false) Long idEntidad,
-        Pageable pageable
-    ) {
-        return ResponseEntity.ok(
-            PageResponse.from(service.consultarHistorialEntidad(entidadReferenciada, idEntidadRef, pageable))
-        );
-    }
 }
