@@ -20,6 +20,7 @@ public class SubactividadController {
     private final SubactividadService subactividadService;
 
     @PostMapping
+    @PreAuthorize("hasAuthority('PROYECTOS_UPDATE')")
     public ResponseEntity<SubactividadResponseDTO> crear(
             @PathVariable Long actividadId,
             @Valid @RequestBody SubactividadCreateDTO dto) {
@@ -44,6 +45,7 @@ public class SubactividadController {
     }
 
     @PostMapping("/{subactividadId}/cofinanciamientos")
+    @PreAuthorize("hasAuthority('PROYECTOS_UPDATE')")
     public ResponseEntity<SubactividadResponseDTO> cofinanciar(
             @PathVariable Long subactividadId,
             @Valid @RequestBody SubactividadCofinanciamientoCreateDTO dto) {
@@ -51,6 +53,7 @@ public class SubactividadController {
     }
 
     @PostMapping("/{subactividadId}/evidencias")
+    @PreAuthorize("hasAuthority('PROYECTOS_UPDATE')")
     public ResponseEntity<SubactividadResponseDTO> subirEvidencia(
             @PathVariable Long subactividadId,
             @RequestParam(required = false) MultipartFile file,

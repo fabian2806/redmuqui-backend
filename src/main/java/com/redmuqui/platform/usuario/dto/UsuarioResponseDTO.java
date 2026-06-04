@@ -1,6 +1,7 @@
 package com.redmuqui.platform.usuario.dto;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public record UsuarioResponseDTO(
     Long id,
@@ -13,5 +14,6 @@ public record UsuarioResponseDTO(
     Long idRol,
     String nombreInstitucion,
     Long idInstitucion,
-    LocalDateTime ultimoAcceso
+    LocalDateTime ultimoAcceso,
+    List<String> permisos
 ) {}

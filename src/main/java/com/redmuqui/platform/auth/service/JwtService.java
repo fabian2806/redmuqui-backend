@@ -70,6 +70,10 @@ public class JwtService {
         return "refresh".equals(extractClaim(token, c -> c.get("type", String.class)));
     }
 
+    public boolean isAccessToken(String token) {
+        return "access".equals(extractClaim(token, c -> c.get("type", String.class)));
+    }
+
     public boolean isPasswordResetToken(String token) {
         return "password_reset".equals(extractClaim(token, c -> c.get("type", String.class)));
     }

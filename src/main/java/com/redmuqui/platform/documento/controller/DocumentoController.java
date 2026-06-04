@@ -28,35 +28,38 @@ public class DocumentoController {
     private final ArchivoService archivoService;
 
     @GetMapping
+    @PreAuthorize("hasAuthority('DOCUMENTOS_READ')")
     public ResponseEntity<PageResponse<DocumentoResponseDTO>> listar(Pageable pageable) {
         return ResponseEntity.ok(PageResponse.from(service.listar(pageable)));
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('DOCUMENTOS_READ')")
     public ResponseEntity<DocumentoResponseDTO> obtener(@PathVariable Long id) {
         return ResponseEntity.ok(service.obtener(id));
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'TECNICO')")
+    @PreAuthorize("hasAuthority('DOCUMENTOS_CREATE')")
     public ResponseEntity<DocumentoResponseDTO> crear(@Valid @RequestBody DocumentoCreateDTO dto) {
         DocumentoResponseDTO creado = service.crear(dto);
         return ResponseEntity.created(URI.create("/api/v1/documentos/" + creado.id())).body(creado);
     }
 
     @PatchMapping("/{id}/estado")
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'COORDINADOR')")
+    @PreAuthorize("hasAuthority('DOCUMENTOS_VALIDATE')")
     public ResponseEntity<DocumentoResponseDTO> cambiarEstado(@PathVariable Long id, @RequestParam EstadoDocumento estado) {
         return ResponseEntity.ok(service.cambiarEstado(id, estado));
     }
 
     @GetMapping("/{id}/archivos")
+    @PreAuthorize("hasAuthority('DOCUMENTOS_READ')")
     public ResponseEntity<List<ArchivoDTO>> listarArchivos(@PathVariable Long id) {
         return ResponseEntity.ok(archivoService.listarPorDocumento(id));
     }
 
     @PostMapping("/{id}/archivos")
-    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'TECNICO')")
+    @PreAuthorize("hasAuthority('DOCUMENTOS_UPDATE')")
     public ResponseEntity<ArchivoDTO> agregarArchivo(@PathVariable Long id, @Valid @RequestBody ArchivoDTO dto) {
         return ResponseEntity.ok(archivoService.crear(id, dto));
     }

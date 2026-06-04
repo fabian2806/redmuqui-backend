@@ -5,10 +5,19 @@ import com.redmuqui.platform.usuario.dto.UsuarioSummaryDTO;
 import com.redmuqui.platform.usuario.entity.Usuario;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 @Component
 public class UsuarioMapper {
 
     public UsuarioResponseDTO toResponseDTO(Usuario u) {
+        List<String> permisos = u.getRol() != null
+            ? u.getRol().getPermisos().stream()
+                .map(permiso -> permiso.getNombre())
+                .sorted()
+                .toList()
+            : List.of();
+
         return new UsuarioResponseDTO(
             u.getId(),
             u.getNombres(),
@@ -20,7 +29,8 @@ public class UsuarioMapper {
             u.getRol() != null ? u.getRol().getId() : null,
             u.getInstitucion() != null ? u.getInstitucion().getNombre() : null,
             u.getInstitucion() != null ? u.getInstitucion().getId() : null,
-            u.getUltimoAcceso()
+            u.getUltimoAcceso(),
+            permisos
         );
     }
 
