@@ -4,6 +4,7 @@ import com.redmuqui.platform.common.exception.BusinessException;
 import com.redmuqui.platform.common.exception.ResourceNotFoundException;
 import com.redmuqui.platform.documento.dto.DocumentoCreateDTO;
 import com.redmuqui.platform.documento.dto.DocumentoResponseDTO;
+import com.redmuqui.platform.documento.dto.DocumentoUpdateDTO;
 import com.redmuqui.platform.documento.entity.Documento;
 import com.redmuqui.platform.documento.entity.EstadoDocumento;
 import com.redmuqui.platform.documento.repository.DocumentoRepository;
@@ -15,12 +16,18 @@ import com.redmuqui.platform.territorio.entity.Territorio;
 import com.redmuqui.platform.territorio.repository.TerritorioRepository;
 import com.redmuqui.platform.usuario.entity.Usuario;
 import com.redmuqui.platform.usuario.repository.UsuarioRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.TestingAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -34,8 +41,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * Pruebas del registro de documentos (RF-045/046/047) y su asociación a
- * proyecto / eje temático / territorios (RF-051/052/053). Mockito puro, sin BD.
+ * Pruebas del registro (RF-045/046/047), edición (RF-048/054/055) y flujo de
+ * estados (RF-056) de documentos. Mockito puro, sin BD.
  */
 @ExtendWith(MockitoExtension.class)
 class DocumentoServiceTest {
@@ -48,6 +55,13 @@ class DocumentoServiceTest {
 
     @InjectMocks private DocumentoService service;
 
+    @AfterEach
+    void clearSecurityContext() {
+        SecurityContextHolder.clearContext();
+    }
+
+    // ─── helpers ──────────────────────────────────────────────────────────────
+
     private DocumentoCreateDTO dto(String tipo, EstadoDocumento estado,
                                    Long idProyecto, Long idEje,
                                    Long idRespElab, Long idRespVal, Set<Long> territorios) {
@@ -55,6 +69,41 @@ class DocumentoServiceTest {
             "Informe de prueba", "Descripcion", tipo, estado,
             null, null, idProyecto, idEje, idRespElab, idRespVal, territorios);
     }
+
+    private DocumentoUpdateDTO updateDto(String tipo, EstadoDocumento estado,
+                                         Long idRespElab, Long idRespVal) {
+        return new DocumentoUpdateDTO(
+            "Informe actualizado", "Nueva descripción", tipo, estado,
+            null, null, LocalDate.of(2025, 6, 1),
+            null, null, idRespElab, idRespVal, null);
+    }
+
+    /** Instala un Authentication con las authorities indicadas en el SecurityContext. */
+    private void autenticarCon(String... authorities) {
+        var granted = java.util.Arrays.stream(authorities)
+            .map(SimpleGrantedAuthority::new)
+            .toList();
+        var auth = new TestingAuthenticationToken("user", "pass", granted);
+        auth.setAuthenticated(true);
+        SecurityContext ctx = SecurityContextHolder.createEmptyContext();
+        ctx.setAuthentication(auth);
+        SecurityContextHolder.setContext(ctx);
+    }
+
+    /** Crea un Documento stub con el estado indicado y lo registra en el repo mock. */
+    private Documento documentoStubEnEstado(EstadoDocumento estado) {
+        Documento doc = Documento.builder()
+            .titulo("Stub")
+            .tipo("Informe")
+            .estado(estado)
+            .fechaCarga(LocalDate.now())
+            .version(1.0)
+            .build();
+        when(documentoRepository.findById(1L)).thenReturn(Optional.of(doc));
+        return doc;
+    }
+
+    // ─── Tests RF-045/046/047/051/052/053 (creación) ──────────────────────────
 
     @Test
     void crearPersisteCamposYAsociaciones() {
@@ -125,7 +174,7 @@ class DocumentoServiceTest {
     void crearRechazaTerritorioInexistente() {
         Usuario respElab = mock(Usuario.class);
         when(usuarioRepository.findById(10L)).thenReturn(Optional.of(respElab));
-        when(territorioRepository.findAllById(any())).thenReturn(List.of()); // ninguno existe
+        when(territorioRepository.findAllById(any())).thenReturn(List.of());
 
         assertThatThrownBy(() -> service.crear(
             dto("Informe", null, null, null, 10L, null, Set.of(999L))))
@@ -143,5 +192,92 @@ class DocumentoServiceTest {
             .isInstanceOf(ResourceNotFoundException.class)
             .hasMessageContaining("Usuario");
         verify(documentoRepository, never()).save(any());
+    }
+
+    // ─── Tests RF-048/054/055 (actualización) ─────────────────────────────────
+
+    @Test
+    void actualizarPersisteCambiosEnCampos() {
+        autenticarCon("DOCUMENTOS_UPDATE");
+        Documento doc = documentoStubEnEstado(EstadoDocumento.BORRADOR);
+        Usuario respElab = mock(Usuario.class);
+        when(respElab.getId()).thenReturn(10L);
+        when(usuarioRepository.findById(10L)).thenReturn(Optional.of(respElab));
+        when(documentoRepository.save(any(Documento.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        DocumentoResponseDTO result = service.actualizar(1L,
+            updateDto("Manual", EstadoDocumento.BORRADOR, 10L, null));
+
+        assertThat(result.titulo()).isEqualTo("Informe actualizado");
+        assertThat(result.tipo()).isEqualTo("Manual");
+        assertThat(result.fechaCarga()).isEqualTo(LocalDate.of(2025, 6, 1));
+        verify(documentoRepository).save(any(Documento.class));
+    }
+
+    @Test
+    void actualizarRechazaTipoNoPermitido() {
+        autenticarCon("DOCUMENTOS_UPDATE");
+        documentoStubEnEstado(EstadoDocumento.BORRADOR);
+
+        assertThatThrownBy(() -> service.actualizar(1L,
+            updateDto("Oficio", EstadoDocumento.BORRADOR, 10L, null)))
+            .isInstanceOf(BusinessException.class)
+            .hasMessageContaining("tipo");
+        verify(documentoRepository, never()).save(any());
+    }
+
+    @Test
+    void actualizarRechazaResponsableElaboracionInexistente() {
+        autenticarCon("DOCUMENTOS_UPDATE");
+        documentoStubEnEstado(EstadoDocumento.BORRADOR);
+        when(usuarioRepository.findById(999L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.actualizar(1L,
+            updateDto("Informe", EstadoDocumento.BORRADOR, 999L, null)))
+            .isInstanceOf(ResourceNotFoundException.class)
+            .hasMessageContaining("Usuario");
+        verify(documentoRepository, never()).save(any());
+    }
+
+    // ─── Tests RF-056 (flujo de estados) ──────────────────────────────────────
+
+    @Test
+    void cambiarEstadoBorradorAEnRevisionValido() {
+        autenticarCon("DOCUMENTOS_UPDATE");
+        documentoStubEnEstado(EstadoDocumento.BORRADOR);
+
+        DocumentoResponseDTO result = service.cambiarEstado(1L, EstadoDocumento.EN_REVISION);
+
+        assertThat(result.estado()).isEqualTo(EstadoDocumento.EN_REVISION);
+    }
+
+    @Test
+    void cambiarEstadoEnRevisionAPublicadoValido() {
+        autenticarCon("DOCUMENTOS_VALIDATE");
+        documentoStubEnEstado(EstadoDocumento.EN_REVISION);
+
+        DocumentoResponseDTO result = service.cambiarEstado(1L, EstadoDocumento.PUBLICADO);
+
+        assertThat(result.estado()).isEqualTo(EstadoDocumento.PUBLICADO);
+    }
+
+    @Test
+    void cambiarEstadoBorradorAPublicadoRechazado() {
+        autenticarCon("DOCUMENTOS_UPDATE");
+        documentoStubEnEstado(EstadoDocumento.BORRADOR);
+
+        assertThatThrownBy(() -> service.cambiarEstado(1L, EstadoDocumento.PUBLICADO))
+            .isInstanceOf(BusinessException.class)
+            .hasMessageContaining("BORRADOR → PUBLICADO");
+    }
+
+    @Test
+    void cambiarEstadoTransicionInvalidaRechazada() {
+        autenticarCon("DOCUMENTOS_VALIDATE");
+        documentoStubEnEstado(EstadoDocumento.PUBLICADO);
+
+        assertThatThrownBy(() -> service.cambiarEstado(1L, EstadoDocumento.BORRADOR))
+            .isInstanceOf(BusinessException.class)
+            .hasMessageContaining("no permitida");
     }
 }
