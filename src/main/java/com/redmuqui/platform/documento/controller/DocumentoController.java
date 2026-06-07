@@ -4,6 +4,7 @@ import com.redmuqui.platform.common.dto.PageResponse;
 import com.redmuqui.platform.documento.dto.ArchivoDTO;
 import com.redmuqui.platform.documento.dto.DocumentoCreateDTO;
 import com.redmuqui.platform.documento.dto.DocumentoResponseDTO;
+import com.redmuqui.platform.documento.dto.DocumentoUpdateDTO;
 import com.redmuqui.platform.documento.entity.EstadoDocumento;
 import com.redmuqui.platform.documento.service.ArchivoService;
 import com.redmuqui.platform.documento.service.DocumentoService;
@@ -46,8 +47,16 @@ public class DocumentoController {
         return ResponseEntity.created(URI.create("/api/v1/documentos/" + creado.id())).body(creado);
     }
 
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('DOCUMENTOS_UPDATE')")
+    public ResponseEntity<DocumentoResponseDTO> actualizar(
+            @PathVariable Long id,
+            @Valid @RequestBody DocumentoUpdateDTO dto) {
+        return ResponseEntity.ok(service.actualizar(id, dto));
+    }
+
     @PatchMapping("/{id}/estado")
-    @PreAuthorize("hasAuthority('DOCUMENTOS_VALIDATE')")
+    @PreAuthorize("hasAnyAuthority('DOCUMENTOS_UPDATE','DOCUMENTOS_VALIDATE')")
     public ResponseEntity<DocumentoResponseDTO> cambiarEstado(@PathVariable Long id, @RequestParam EstadoDocumento estado) {
         return ResponseEntity.ok(service.cambiarEstado(id, estado));
     }
