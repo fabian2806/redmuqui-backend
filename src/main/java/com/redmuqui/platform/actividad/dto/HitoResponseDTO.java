@@ -12,6 +12,12 @@ public record HitoResponseDTO(
     LocalDate fechaClave,
     EstadoHito estado,
     Long idProyecto,
+    Double porcentajeAvance,
+    LocalDate fechaInicio,
+    LocalDate fechaFin,
+    Long duracionDias,
+    Integer totalActividades,
+    Integer actividadesFinalizadas,
     LocalDateTime fechaCreacion,
     LocalDateTime fechaModificacion
 ) {}
