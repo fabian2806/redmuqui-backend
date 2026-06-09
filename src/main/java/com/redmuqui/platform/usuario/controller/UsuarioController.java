@@ -13,8 +13,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -37,11 +36,18 @@ public class UsuarioController {
 
     @GetMapping("/me")
     @Operation(summary = "Información del usuario autenticado (RF-006)")
-    public ResponseEntity<UsuarioResponseDTO> obtenerPropio(@AuthenticationPrincipal UserDetails userDetails) {
-        if (userDetails == null) {
+    public ResponseEntity<UsuarioResponseDTO> obtenerPropio(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario no autenticado");
         }
-        return ResponseEntity.ok(usuarioService.obtenerPorEmail(userDetails.getUsername()));
+
+        String email = authentication.getName();
+
+        if (email == null || email.equals("anonymousUser")) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario no autenticado");
+        }
+
+        return ResponseEntity.ok(usuarioService.obtenerPorEmail(email));
     }
 
     @GetMapping("/{id}")

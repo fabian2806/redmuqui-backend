@@ -11,8 +11,8 @@ spring:
 
 app:
   security:
-    enabled: true
-    method-enabled: true
+    enabled: false   # Desactiva Spring Security en endpoints (ver SecurityConfig)
+    method-enabled: false   # Desactiva @PreAuthorize/@Secured en dev
 
 logging:
   level:
