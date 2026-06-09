@@ -11,9 +11,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -38,9 +40,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(
-        @NonNull HttpServletRequest request,
-        @NonNull HttpServletResponse response,
-        @NonNull FilterChain filterChain
+            @NonNull HttpServletRequest request,
+            @NonNull HttpServletResponse response,
+            @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
 
         final String authHeader = request.getHeader(AUTH_HEADER);
@@ -55,24 +57,37 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             final String userEmail = jwtService.extractUsername(jwt);
 
-            if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+            Authentication currentAuth = SecurityContextHolder.getContext().getAuthentication();
+
+            if (userEmail != null &&
+                    (currentAuth == null || currentAuth instanceof AnonymousAuthenticationToken)) {
+
                 UserDetails userDetails = userDetailsService.loadUserByUsername(userEmail);
 
                 if (
-                    jwtService.isAccessToken(jwt)
-                        && !tokenRevocationService.isTokenRevoked(jwt)
-                        && jwtService.isTokenValid(jwt, userDetails)
+                        jwtService.isAccessToken(jwt)
+                                && !tokenRevocationService.isTokenRevoked(jwt)
+                                && jwtService.isTokenValid(jwt, userDetails)
                 ) {
-                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                        userDetails, null, userDetails.getAuthorities()
+                    UsernamePasswordAuthenticationToken authToken =
+                            new UsernamePasswordAuthenticationToken(
+                                    userDetails,
+                                    null,
+                                    userDetails.getAuthorities()
+                            );
+
+                    authToken.setDetails(
+                            new WebAuthenticationDetailsSource().buildDetails(request)
                     );
-                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+
                     SecurityContextHolder.getContext().setAuthentication(authToken);
                 }
             }
         } catch (JwtException ex) {
             log.warn("Token JWT inválido o expirado: {}", ex.getMessage());
-            // No interrumpimos: si la ruta requiere auth, otro filtro se encarga
+        } catch (Exception ex) {
+            log.warn("Token JWT inválido o expirado: {}", ex.getMessage());
+            ex.printStackTrace();
         }
 
         filterChain.doFilter(request, response);
