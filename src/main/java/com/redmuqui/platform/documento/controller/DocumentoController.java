@@ -46,6 +46,15 @@ public class DocumentoController {
         return ResponseEntity.created(URI.create("/api/v1/documentos/" + creado.id())).body(creado);
     }
 
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('DOCUMENTOS_UPDATE')")
+    public ResponseEntity<DocumentoResponseDTO> actualizar(
+            @PathVariable Long id,
+            @Valid @RequestBody DocumentoCreateDTO dto
+    ) {
+        return ResponseEntity.ok(service.actualizar(id, dto));
+    }
+
     @PatchMapping("/{id}/estado")
     @PreAuthorize("hasAuthority('DOCUMENTOS_VALIDATE')")
     public ResponseEntity<DocumentoResponseDTO> cambiarEstado(@PathVariable Long id, @RequestParam EstadoDocumento estado) {
@@ -63,4 +72,6 @@ public class DocumentoController {
     public ResponseEntity<ArchivoDTO> agregarArchivo(@PathVariable Long id, @Valid @RequestBody ArchivoDTO dto) {
         return ResponseEntity.ok(archivoService.crear(id, dto));
     }
+
+
 }
