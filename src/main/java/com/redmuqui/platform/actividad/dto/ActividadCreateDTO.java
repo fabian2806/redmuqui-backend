@@ -12,7 +12,8 @@ public record ActividadCreateDTO(
     String descripcion,
     LocalDate fechaInicio,
     LocalDate fechaFin,
-        EstadoActividad estado,
-        @NotNull Long idProyecto,
+    EstadoActividad estado,
+    @NotNull Long idProyecto,
+    @NotNull Long idHito,
     Set<Long> idResponsables
 ) {}

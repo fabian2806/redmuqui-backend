@@ -5,6 +5,7 @@ import com.redmuqui.platform.actividad.dto.HitoResponseDTO;
 import com.redmuqui.platform.actividad.entity.EstadoHito;
 import com.redmuqui.platform.actividad.entity.Hito;
 import com.redmuqui.platform.actividad.repository.HitoRepository;
+import com.redmuqui.platform.actividad.repository.ActividadRepository;
 import com.redmuqui.platform.common.exception.BusinessException;
 import com.redmuqui.platform.common.exception.ResourceNotFoundException;
 import com.redmuqui.platform.proyecto.entity.Proyecto;
@@ -21,6 +22,8 @@ public class HitoService {
 
     private final HitoRepository hitoRepository;
     private final ProyectoRepository proyectoRepository;
+    private final ActividadRepository actividadRepository;
+    private final AvanceProyectoService avanceProyectoService;
 
     @Transactional(readOnly = true)
     public List<HitoResponseDTO> listarPorProyecto(Long idProyecto) {
@@ -45,7 +48,7 @@ public class HitoService {
             .nombre(dto.nombre())
             .descripcion(dto.descripcion())
             .fechaClave(dto.fechaClave())
-            .estado(dto.estado() != null ? dto.estado() : EstadoHito.PENDIENTE)
+            .estado(EstadoHito.PENDIENTE)
             .proyecto(proyecto)
             .build();
         return toDTO(hitoRepository.save(hito));
@@ -59,7 +62,6 @@ public class HitoService {
         hito.setNombre(dto.nombre());
         hito.setDescripcion(dto.descripcion());
         hito.setFechaClave(dto.fechaClave());
-        hito.setEstado(dto.estado() != null ? dto.estado() : EstadoHito.PENDIENTE);
 
         return toDTO(hito);
     }
@@ -68,7 +70,12 @@ public class HitoService {
     public void eliminar(Long idProyecto, Long id) {
         Hito hito = hitoRepository.findByIdAndProyectoId(id, idProyecto)
             .orElseThrow(() -> new ResourceNotFoundException("Hito", id));
+        if (actividadRepository.existsByHitoId(id)) {
+            throw new BusinessException("No se puede eliminar el hito porque tiene actividades relacionadas");
+        }
         hitoRepository.delete(hito);
+        hitoRepository.flush();
+        avanceProyectoService.recalcularProyecto(idProyecto);
     }
 
     @Transactional
@@ -80,10 +87,13 @@ public class HitoService {
     }
 
     private HitoResponseDTO toDTO(Hito h) {
+        AvanceProyectoService.ResumenHito resumen = avanceProyectoService.resumir(h);
         return new HitoResponseDTO(
             h.getId(), h.getNombre(), h.getDescripcion(),
-            h.getFechaClave(), h.getEstado(),
+            h.getFechaClave(), resumen.estado(),
             h.getProyecto().getId(),
+            resumen.porcentajeAvance(), resumen.fechaInicio(), resumen.fechaFin(), resumen.duracionDias(),
+            resumen.totalActividades(), resumen.actividadesFinalizadas(),
             h.getFechaCreacion(), h.getFechaModificacion()
         );
     }

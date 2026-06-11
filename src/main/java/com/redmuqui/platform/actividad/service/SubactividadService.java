@@ -28,6 +28,7 @@ public class SubactividadService {
     private final UsuarioRepository usuarioRepository;
     private final SubactividadCofinanciamientoRepository cofinanciamientoRepository;
     private final SubactividadArchivoRepository archivoRepository;
+    private final AvanceProyectoService avanceProyectoService;
     
     private final String uploadDir = System.getProperty("user.dir") + "/uploads/";
 
@@ -45,11 +46,14 @@ public class SubactividadService {
             .mujeresInvolucradas(dto.mujeresInvolucradas() != null ? dto.mujeresInvolucradas() : 0)
             .fechaInicio(dto.fechaInicio())
             .fechaFin(dto.fechaFin())
+            .estado(dto.estado() != null ? dto.estado() : EstadoSubactividad.PENDIENTE)
             .descripcion(dto.descripcion())
             .actividad(actividad)
             .build();
-            
-        return toDTO(subactividadRepository.save(subactividad));
+
+        Subactividad guardada = subactividadRepository.save(subactividad);
+        avanceProyectoService.recalcularActividad(actividad.getId());
+        return toDTO(guardada);
     }
 
     @Transactional
@@ -68,15 +72,21 @@ public class SubactividadService {
         s.setMujeresInvolucradas(dto.mujeresInvolucradas() != null ? dto.mujeresInvolucradas() : 0);
         s.setFechaInicio(dto.fechaInicio());
         s.setFechaFin(dto.fechaFin());
+        s.setEstado(dto.estado() != null ? dto.estado() : EstadoSubactividad.PENDIENTE);
 
-        return toDTO(subactividadRepository.save(s));
+        Subactividad guardada = subactividadRepository.save(s);
+        avanceProyectoService.recalcularActividad(guardada.getActividad().getId());
+        return toDTO(guardada);
     }
 
     @Transactional
     public void eliminar(Long subactividadId) {
         Subactividad s = subactividadRepository.findById(subactividadId)
             .orElseThrow(() -> new ResourceNotFoundException("Subactividad", subactividadId));
+        Long actividadId = s.getActividad().getId();
         subactividadRepository.delete(s);
+        subactividadRepository.flush();
+        avanceProyectoService.recalcularActividad(actividadId);
     }
 
     @Transactional
@@ -151,6 +161,7 @@ public class SubactividadService {
             s.getMujeresInvolucradas(),
             s.getFechaInicio(),
             s.getFechaFin(),
+            s.getEstado(),
             s.getDescripcion(),
             s.getArchivosEvidencia().stream()
                 .map(a -> new SubactividadArchivoResponseDTO(a.getId(), a.getNombre(), a.getUrl()))
