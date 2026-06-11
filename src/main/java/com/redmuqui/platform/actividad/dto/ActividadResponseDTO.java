@@ -15,6 +15,8 @@ public record ActividadResponseDTO(
     EstadoActividad estado,
     Integer porcentajeAvance,
     Long idProyecto,
+    Long idHito,
+    String nombreHito,
     Set<Long> idResponsables,
     List<SubactividadResponseDTO> subactividades
 ) {}
