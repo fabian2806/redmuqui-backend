@@ -9,6 +9,7 @@ import com.redmuqui.platform.common.exception.BusinessException;
 import com.redmuqui.platform.common.exception.ResourceNotFoundException;
 import com.redmuqui.platform.documento.dto.DocumentoCreateDTO;
 import com.redmuqui.platform.documento.dto.DocumentoResponseDTO;
+import com.redmuqui.platform.documento.dto.DocumentoUpdateDTO;
 import com.redmuqui.platform.documento.entity.EstadoDocumento;
 import com.redmuqui.platform.documento.repository.DocumentoRepository;
 import com.redmuqui.platform.ejetematico.repository.EjeTematicoRepository;
@@ -22,8 +23,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.HashSet;
 import java.util.List;
@@ -171,84 +170,64 @@ public class DocumentoService {
     }
 
     @Transactional
-    public DocumentoResponseDTO actualizar(Long id, DocumentoCreateDTO dto) {
-        Documento documento = documentoRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Documento no encontrado"
-                ));
+    public DocumentoResponseDTO actualizar(Long id, DocumentoUpdateDTO dto) {
+        Documento documento = buscarOFallar(id);
 
-        documento.setTitulo(dto.titulo().trim());
-        documento.setDescripcion(dto.descripcion());
-        documento.setTipo(dto.tipo().trim());
-
-        if (dto.estado() != null) {
-            documento.setEstado(dto.estado());
+        String tipo = dto.tipo() != null ? dto.tipo().trim() : null;
+        if (tipo == null || !TIPOS_PERMITIDOS.contains(tipo)) {
+            throw new BusinessException(
+                "El tipo de documento no es válido. Valores permitidos: " + TIPOS_PERMITIDOS);
         }
 
+        if (dto.estado() == EstadoDocumento.PUBLICADO
+                && documento.getEstado() != EstadoDocumento.PUBLICADO
+                && !tieneAuthority("DOCUMENTOS_VALIDATE")) {
+            throw new BusinessException(
+                "Se requiere el permiso DOCUMENTOS_VALIDATE para publicar un documento.");
+        }
+
+        documento.setTitulo(dto.titulo());
+        documento.setDescripcion(dto.descripcion());
+        documento.setTipo(tipo);
+        documento.setEstado(dto.estado());
         documento.setTipoArchivo(dto.tipoArchivo());
         documento.setEnlace(dto.enlace());
+        documento.setFechaCarga(dto.fechaCarga());
 
         if (dto.idProyecto() != null) {
-            Proyecto proyecto = proyectoRepository.findById(dto.idProyecto())
-                    .orElseThrow(() -> new ResponseStatusException(
-                            HttpStatus.NOT_FOUND,
-                            "Proyecto no encontrado"
-                    ));
-            documento.setProyecto(proyecto);
+            documento.setProyecto(proyectoRepository.findById(dto.idProyecto())
+                .orElseThrow(() -> new ResourceNotFoundException("Proyecto", dto.idProyecto())));
         } else {
             documento.setProyecto(null);
         }
 
         if (dto.idEjeTematico() != null) {
-            EjeTematico ejeTematico = ejeTematicoRepository.findById(dto.idEjeTematico())
-                    .orElseThrow(() -> new ResponseStatusException(
-                            HttpStatus.NOT_FOUND,
-                            "Eje temático no encontrado"
-                    ));
-            documento.setEjeTematico(ejeTematico);
+            documento.setEjeTematico(ejeTematicoRepository.findById(dto.idEjeTematico())
+                .orElseThrow(() -> new ResourceNotFoundException("EjeTematico", dto.idEjeTematico())));
         } else {
             documento.setEjeTematico(null);
         }
 
-        Usuario respElaboracion = usuarioRepository.findById(dto.idRespElaboracion())
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Responsable de elaboración no encontrado"
-                ));
-
-        documento.setRespElaboracion(respElaboracion);
+        documento.setRespElaboracion(usuarioRepository.findById(dto.idRespElaboracion())
+            .orElseThrow(() -> new ResourceNotFoundException("Usuario", dto.idRespElaboracion())));
 
         if (dto.idRespValidacion() != null) {
-            Usuario respValidacion = usuarioRepository.findById(dto.idRespValidacion())
-                    .orElseThrow(() -> new ResponseStatusException(
-                            HttpStatus.NOT_FOUND,
-                            "Responsable de validación no encontrado"
-                    ));
-
-            documento.setRespValidacion(respValidacion);
+            documento.setRespValidacion(usuarioRepository.findById(dto.idRespValidacion())
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario", dto.idRespValidacion())));
         } else {
             documento.setRespValidacion(null);
         }
 
-        if (dto.idTerritorios() != null) {
-            Set<Territorio> territorios = new HashSet<>(
-                    territorioRepository.findAllById(dto.idTerritorios())
-            );
-
-            if (territorios.size() != dto.idTerritorios().size()) {
-                throw new ResponseStatusException(
-                        HttpStatus.BAD_REQUEST,
-                        "Uno o más territorios no existen"
-                );
+        if (dto.idTerritorios() != null && !dto.idTerritorios().isEmpty()) {
+            List<Territorio> encontrados = territorioRepository.findAllById(dto.idTerritorios());
+            if (encontrados.size() != dto.idTerritorios().size()) {
+                throw new ResourceNotFoundException("Territorio", dto.idTerritorios());
             }
-
-            documento.setTerritorios(territorios);
+            documento.setTerritorios(new HashSet<>(encontrados));
         } else {
             documento.setTerritorios(new HashSet<>());
         }
 
-        documentoRepository.save(documento);
-        return obtener(id);
+        return toDTO(documentoRepository.save(documento));
     }
 }

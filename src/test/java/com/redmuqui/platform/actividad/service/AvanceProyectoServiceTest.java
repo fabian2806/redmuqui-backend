@@ -6,6 +6,7 @@ import com.redmuqui.platform.actividad.entity.EstadoHito;
 import com.redmuqui.platform.actividad.entity.Hito;
 import com.redmuqui.platform.actividad.repository.ActividadRepository;
 import com.redmuqui.platform.actividad.repository.HitoRepository;
+import com.redmuqui.platform.actividad.repository.SubactividadRepository;
 import com.redmuqui.platform.proyecto.entity.Proyecto;
 import com.redmuqui.platform.proyecto.repository.ProyectoRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,13 +28,19 @@ class AvanceProyectoServiceTest {
 
     @Mock private ActividadRepository actividadRepository;
     @Mock private HitoRepository hitoRepository;
+    @Mock private SubactividadRepository subactividadRepository;
     @Mock private ProyectoRepository proyectoRepository;
 
     private AvanceProyectoService service;
 
     @BeforeEach
     void setUp() {
-        service = new AvanceProyectoService(actividadRepository, hitoRepository, proyectoRepository);
+        service = new AvanceProyectoService(
+            actividadRepository,
+            hitoRepository,
+            subactividadRepository,
+            proyectoRepository
+        );
     }
 
     @Test
