@@ -14,6 +14,5 @@ public record ActividadUpdateDTO(
     LocalDate fechaFin,
     EstadoActividad estado,
     @NotNull Long idProyecto,
-    @NotNull Long idHito,
     Set<Long> idResponsables
 ) {}

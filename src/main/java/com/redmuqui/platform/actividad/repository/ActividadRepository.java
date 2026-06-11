@@ -14,6 +14,4 @@ public interface ActividadRepository extends JpaRepository<Actividad, Long> {
     List<Actividad> findByProyectoId(Long idProyecto);
     Page<Actividad> findByProyectoId(Long idProyecto, Pageable pageable);
     Page<Actividad> findByEstado(EstadoActividad estado, Pageable pageable);
-    List<Actividad> findByHitoIdOrderByFechaInicioAscIdAsc(Long idHito);
-    boolean existsByHitoId(Long idHito);
 }

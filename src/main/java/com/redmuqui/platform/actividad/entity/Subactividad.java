@@ -47,11 +47,6 @@ public class Subactividad extends Auditable {
     @Column(name = "fecha_fin")
     private LocalDate fechaFin;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 30)
-    @Builder.Default
-    private EstadoSubactividad estado = EstadoSubactividad.PENDIENTE;
-
     @Column(columnDefinition = "TEXT")
     private String descripcion;
 

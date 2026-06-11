@@ -82,12 +82,6 @@ class BitacoraAspectTest {
                 LocalDate.now(),
                 EstadoHito.PENDIENTE,
                 9L,
-                0D,
-                null,
-                null,
-                0L,
-                0,
-                0,
                 java.time.LocalDateTime.now(),
                 java.time.LocalDateTime.now()
         );
@@ -114,8 +108,6 @@ class BitacoraAspectTest {
                 EstadoActividad.EN_CURSO,
                 1,
                 9L,
-                3L,
-                "Hito de capacitación",
                 Set.of(1L),
                 java.util.List.of()
         );

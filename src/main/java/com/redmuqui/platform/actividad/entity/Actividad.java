@@ -46,10 +46,6 @@ public class Actividad extends Auditable {
     @JoinColumn(name = "id_proyecto", nullable = false)
     private Proyecto proyecto;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_hito")
-    private Hito hito;
-
     @Column(name = "porcentaje_avance", columnDefinition = "INTEGER DEFAULT 0")
     @Builder.Default
     private Integer porcentajeAvance = 0;
