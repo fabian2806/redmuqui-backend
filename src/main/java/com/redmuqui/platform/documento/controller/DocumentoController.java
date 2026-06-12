@@ -1,13 +1,10 @@
 package com.redmuqui.platform.documento.controller;
 
 import com.redmuqui.platform.common.dto.PageResponse;
-import com.redmuqui.platform.documento.dto.ArchivoDTO;
-import com.redmuqui.platform.documento.dto.DocumentoCreateDTO;
-import com.redmuqui.platform.documento.dto.DocumentoResponseDTO;
+import com.redmuqui.platform.documento.dto.*;
 import com.redmuqui.platform.documento.entity.EstadoDocumento;
 import com.redmuqui.platform.documento.service.ArchivoService;
 import com.redmuqui.platform.documento.service.DocumentoService;
-import com.redmuqui.platform.documento.dto.ArchivoDescargaResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -54,7 +51,7 @@ public class DocumentoController {
     @PreAuthorize("hasAuthority('DOCUMENTOS_UPDATE')")
     public ResponseEntity<DocumentoResponseDTO> actualizar(
             @PathVariable Long id,
-            @Valid @RequestBody DocumentoCreateDTO dto) {
+            @Valid @RequestBody DocumentoUpdateDTO dto) {
         return ResponseEntity.ok(service.actualizar(id, dto));
     }
 
