@@ -54,8 +54,7 @@ public class DocumentoController {
     @PreAuthorize("hasAuthority('DOCUMENTOS_UPDATE')")
     public ResponseEntity<DocumentoResponseDTO> actualizar(
             @PathVariable Long id,
-            @Valid @RequestBody DocumentoCreateDTO dto
-    ) {
+            @Valid @RequestBody DocumentoUpdateDTO dto) {
         return ResponseEntity.ok(service.actualizar(id, dto));
     }
 
