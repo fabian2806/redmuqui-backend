@@ -1,10 +1,12 @@
 package com.redmuqui.platform.reporte.controller;
 
+import com.redmuqui.platform.reporte.dto.CoberturaTerritorialDTO;
 import com.redmuqui.platform.reporte.dto.ConteoDTO;
 import com.redmuqui.platform.reporte.dto.DocumentoRecienteDTO;
 import com.redmuqui.platform.reporte.dto.IndicadoresDTO;
 import com.redmuqui.platform.reporte.dto.ProyectoRiesgoDTO;
 import com.redmuqui.platform.reporte.service.ReporteService;
+import com.redmuqui.platform.territorio.entity.TipoTerritorio;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -61,5 +64,13 @@ public class ReporteController {
     @Operation(summary = "Últimos documentos registrados (RF-072)")
     public ResponseEntity<List<DocumentoRecienteDTO>> documentosRecientes() {
         return ResponseEntity.ok(service.documentosRecientes());
+    }
+
+    @GetMapping("/cobertura-territorial")
+    @PreAuthorize("hasAuthority('REPORTES_READ')")
+    @Operation(summary = "Cobertura de la red por territorio para el mapa, por nivel (Sprint 4 ④)")
+    public ResponseEntity<List<CoberturaTerritorialDTO>> coberturaTerritorial(
+            @RequestParam(name = "nivel", defaultValue = "DEPARTAMENTO") TipoTerritorio nivel) {
+        return ResponseEntity.ok(service.coberturaTerritorial(nivel));
     }
 }

@@ -18,4 +18,14 @@ public interface SubactividadRepository extends JpaRepository<Subactividad, Long
 
     @Query("SELECT COALESCE(SUM(s.mujeresInvolucradas), 0) FROM Subactividad s")
     long sumMujeresInvolucradas();
+
+    // ----- Cobertura territorial para el mapa (Sprint 4 ④) -----
+
+    /**
+     * Beneficiarios (hombres + mujeres) por territorio del proyecto.
+     * Cadena: subactividad → actividad → proyecto → territorios (N:M).
+     */
+    @Query("SELECT t.id, COALESCE(SUM(s.hombresInvolucrados + s.mujeresInvolucradas), 0) " +
+           "FROM Subactividad s JOIN s.actividad a JOIN a.proyecto p JOIN p.territorios t GROUP BY t.id")
+    List<Object[]> beneficiariosPorTerritorio();
 }

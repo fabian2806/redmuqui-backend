@@ -9,10 +9,13 @@ import com.redmuqui.platform.documento.repository.DocumentoRepository;
 import com.redmuqui.platform.proyecto.entity.EstadoProyecto;
 import com.redmuqui.platform.proyecto.entity.Proyecto;
 import com.redmuqui.platform.proyecto.repository.ProyectoRepository;
+import com.redmuqui.platform.reporte.dto.CoberturaTerritorialDTO;
 import com.redmuqui.platform.reporte.dto.ConteoDTO;
 import com.redmuqui.platform.reporte.dto.DocumentoRecienteDTO;
 import com.redmuqui.platform.reporte.dto.IndicadoresDTO;
 import com.redmuqui.platform.reporte.dto.ProyectoRiesgoDTO;
+import com.redmuqui.platform.territorio.entity.TipoTerritorio;
+import com.redmuqui.platform.territorio.repository.TerritorioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,6 +47,7 @@ public class ReporteService {
     private final SubactividadRepository subactividadRepository;
     private final DocumentoRepository documentoRepository;
     private final HitoRepository hitoRepository;
+    private final TerritorioRepository territorioRepository;
 
     @Transactional(readOnly = true)
     public IndicadoresDTO obtenerIndicadores() {
@@ -127,6 +131,46 @@ public class ReporteService {
                 d.getTipo(),
                 d.getEstado(),
                 d.getFechaCarga()
+            ))
+            .toList();
+    }
+
+    /**
+     * Cobertura de la red por unidad territorial del nivel pedido (hoy: departamento),
+     * para el Mapa Territorial (Sprint 4 ④). Parte de TODOS los territorios del nivel
+     * y rellena en cero los que no tienen actividad, para que el mapa no deje huecos.
+     * Las cifras consideran proyectos de cualquier estado (huella de cobertura).
+     */
+    @Transactional(readOnly = true)
+    public List<CoberturaTerritorialDTO> coberturaTerritorial(TipoTerritorio nivel) {
+        Map<Long, Long> proyectosPorTerritorio = new HashMap<>();
+        Map<Long, Double> presupuestoPorTerritorio = new HashMap<>();
+        for (Object[] fila : proyectoRepository.agregarPorTerritorio()) {
+            Long idTerritorio = ((Number) fila[0]).longValue();
+            proyectosPorTerritorio.put(idTerritorio, ((Number) fila[1]).longValue());
+            presupuestoPorTerritorio.put(idTerritorio, ((Number) fila[2]).doubleValue());
+        }
+
+        Map<Long, Long> institucionesPorTerritorio = new HashMap<>();
+        for (Object[] fila : proyectoRepository.contarInstitucionesPorTerritorio()) {
+            institucionesPorTerritorio.put(((Number) fila[0]).longValue(), ((Number) fila[1]).longValue());
+        }
+
+        Map<Long, Long> beneficiariosPorTerritorio = new HashMap<>();
+        for (Object[] fila : subactividadRepository.beneficiariosPorTerritorio()) {
+            beneficiariosPorTerritorio.put(((Number) fila[0]).longValue(), ((Number) fila[1]).longValue());
+        }
+
+        return territorioRepository.findByTipoOrderByNombreAsc(nivel).stream()
+            .map(t -> new CoberturaTerritorialDTO(
+                t.getId(),
+                t.getCodigo(),
+                t.getNombre(),
+                t.getTipo().name(),
+                proyectosPorTerritorio.getOrDefault(t.getId(), 0L),
+                presupuestoPorTerritorio.getOrDefault(t.getId(), 0.0),
+                beneficiariosPorTerritorio.getOrDefault(t.getId(), 0L),
+                institucionesPorTerritorio.getOrDefault(t.getId(), 0L)
             ))
             .toList();
     }
