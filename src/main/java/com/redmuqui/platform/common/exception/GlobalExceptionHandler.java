@@ -14,6 +14,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import java.util.Map;
 
 import java.util.List;
@@ -63,6 +65,21 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleUnreadableMessage(HttpMessageNotReadableException ex, HttpServletRequest request) {
         log.warn("JSON de entrada invÃ¡lido: {}", ex.getMostSpecificCause().getMessage());
         return build(HttpStatus.BAD_REQUEST, "JSON de entrada invÃ¡lido o con valores no permitidos", request);
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
+        String mensaje = String.format(
+            "El parametro '%s' tiene un valor no valido: '%s'", ex.getName(), ex.getValue());
+        log.warn("Parametro con tipo o valor invalido: {}", mensaje);
+        return build(HttpStatus.BAD_REQUEST, mensaje, request);
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ErrorResponse> handleMissingParam(MissingServletRequestParameterException ex, HttpServletRequest request) {
+        String mensaje = String.format("Falta el parametro requerido '%s'", ex.getParameterName());
+        log.warn("Parametro requerido ausente: {}", mensaje);
+        return build(HttpStatus.BAD_REQUEST, mensaje, request);
     }
 
     @ExceptionHandler(BadCredentialsException.class)

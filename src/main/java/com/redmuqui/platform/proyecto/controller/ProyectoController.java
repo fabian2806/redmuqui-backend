@@ -59,6 +59,7 @@ public class ProyectoController {
     }
 
     @GetMapping("/ultimo-codigo")
+    @PreAuthorize("hasAuthority('PROYECTOS_CREATE')")
     @Operation(summary = "Obtener el último código de proyecto registrado")
     public ResponseEntity<Map<String, String>> obtenerUltimoCodigo() {
         String ultimoCodigo = service.obtenerUltimoCodigo();
