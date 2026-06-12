@@ -4,17 +4,20 @@ import com.redmuqui.platform.common.dto.PageResponse;
 import com.redmuqui.platform.documento.dto.ArchivoDTO;
 import com.redmuqui.platform.documento.dto.DocumentoCreateDTO;
 import com.redmuqui.platform.documento.dto.DocumentoResponseDTO;
-import com.redmuqui.platform.documento.dto.DocumentoUpdateDTO;
 import com.redmuqui.platform.documento.entity.EstadoDocumento;
 import com.redmuqui.platform.documento.service.ArchivoService;
 import com.redmuqui.platform.documento.service.DocumentoService;
+import com.redmuqui.platform.documento.dto.ArchivoDescargaResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.net.URI;
 import java.util.List;
@@ -57,7 +60,10 @@ public class DocumentoController {
 
     @PatchMapping("/{id}/estado")
     @PreAuthorize("hasAnyAuthority('DOCUMENTOS_UPDATE','DOCUMENTOS_VALIDATE')")
-    public ResponseEntity<DocumentoResponseDTO> cambiarEstado(@PathVariable Long id, @RequestParam EstadoDocumento estado) {
+    public ResponseEntity<DocumentoResponseDTO> cambiarEstado(
+            @PathVariable Long id,
+            @RequestParam EstadoDocumento estado
+    ) {
         return ResponseEntity.ok(service.cambiarEstado(id, estado));
     }
 
@@ -67,11 +73,28 @@ public class DocumentoController {
         return ResponseEntity.ok(archivoService.listarPorDocumento(id));
     }
 
-    @PostMapping("/{id}/archivos")
+    @PostMapping(
+            value = "/{id}/archivos",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
     @PreAuthorize("hasAuthority('DOCUMENTOS_UPDATE')")
-    public ResponseEntity<ArchivoDTO> agregarArchivo(@PathVariable Long id, @Valid @RequestBody ArchivoDTO dto) {
-        return ResponseEntity.ok(archivoService.crear(id, dto));
+    public ResponseEntity<ArchivoDTO> agregarArchivo(
+            @PathVariable Long id,
+            @RequestPart("archivo") MultipartFile archivo,
+            @RequestParam(value = "descripcion", required = false) String descripcion
+    ) {
+        ArchivoDTO creado = archivoService.adjuntarArchivo(id, archivo, descripcion);
+        return ResponseEntity.status(HttpStatus.CREATED).body(creado);
     }
 
+    @GetMapping("/{id}/archivos/{archivoId}/descarga")
+    @PreAuthorize("hasAuthority('DOCUMENTOS_READ')")
+    public ResponseEntity<ArchivoDescargaResponse> obtenerUrlDescargaArchivo(
+            @PathVariable Long id,
+            @PathVariable Long archivoId
+    ) {
+        String url = archivoService.generarUrlDescarga(id, archivoId);
 
+        return ResponseEntity.ok(new ArchivoDescargaResponse(url));
+    }
 }
