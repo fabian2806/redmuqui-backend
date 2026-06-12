@@ -50,6 +50,11 @@ app:
     issuer: redmuqui-platform
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
+  s3:
+    bucket-name: ${S3_BUCKET:redmuqui-files-2026}
+
+aws:
+  region: ${AWS_REGION:us-east-1}
 
 # Documentación OpenAPI
 springdoc:
