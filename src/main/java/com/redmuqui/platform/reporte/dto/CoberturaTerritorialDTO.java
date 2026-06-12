@@ -15,5 +15,7 @@ public record CoberturaTerritorialDTO(
     long proyectos,
     double presupuesto,
     long beneficiarios,
+    long beneficiariosHombres,
+    long beneficiariosMujeres,
     long instituciones
 ) {}

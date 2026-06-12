@@ -156,22 +156,31 @@ public class ReporteService {
             institucionesPorTerritorio.put(((Number) fila[0]).longValue(), ((Number) fila[1]).longValue());
         }
 
-        Map<Long, Long> beneficiariosPorTerritorio = new HashMap<>();
+        Map<Long, Long> hombresPorTerritorio = new HashMap<>();
+        Map<Long, Long> mujeresPorTerritorio = new HashMap<>();
         for (Object[] fila : subactividadRepository.beneficiariosPorTerritorio()) {
-            beneficiariosPorTerritorio.put(((Number) fila[0]).longValue(), ((Number) fila[1]).longValue());
+            Long idTerritorio = ((Number) fila[0]).longValue();
+            hombresPorTerritorio.put(idTerritorio, ((Number) fila[1]).longValue());
+            mujeresPorTerritorio.put(idTerritorio, ((Number) fila[2]).longValue());
         }
 
-        return territorioRepository.findByTipoOrderByNombreAsc(nivel).stream()
-            .map(t -> new CoberturaTerritorialDTO(
-                t.getId(),
-                t.getCodigo(),
-                t.getNombre(),
-                t.getTipo().name(),
-                proyectosPorTerritorio.getOrDefault(t.getId(), 0L),
-                presupuestoPorTerritorio.getOrDefault(t.getId(), 0.0),
-                beneficiariosPorTerritorio.getOrDefault(t.getId(), 0L),
-                institucionesPorTerritorio.getOrDefault(t.getId(), 0L)
-            ))
+        return territorioRepository.findByTipoAndCodigoNotNullOrderByNombreAsc(nivel).stream()
+            .map(t -> {
+                long hombres = hombresPorTerritorio.getOrDefault(t.getId(), 0L);
+                long mujeres = mujeresPorTerritorio.getOrDefault(t.getId(), 0L);
+                return new CoberturaTerritorialDTO(
+                    t.getId(),
+                    t.getCodigo(),
+                    t.getNombre(),
+                    t.getTipo().name(),
+                    proyectosPorTerritorio.getOrDefault(t.getId(), 0L),
+                    presupuestoPorTerritorio.getOrDefault(t.getId(), 0.0),
+                    hombres + mujeres,
+                    hombres,
+                    mujeres,
+                    institucionesPorTerritorio.getOrDefault(t.getId(), 0L)
+                );
+            })
             .toList();
     }
 }

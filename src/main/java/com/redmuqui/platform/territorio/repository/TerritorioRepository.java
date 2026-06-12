@@ -10,6 +10,10 @@ import java.util.List;
 @Repository
 public interface TerritorioRepository extends BaseCatalogoRepository<Territorio> {
 
-    /** Unidades de un nivel (p. ej. todos los departamentos) para el mapa territorial. */
-    List<Territorio> findByTipoOrderByNombreAsc(TipoTerritorio tipo);
+    /**
+     * Unidades de un nivel CON código UBIGEO, para el mapa territorial.
+     * Excluye territorios de texto libre (sin código) como zonas o cuencas,
+     * que no son una unidad geográfica del mapa.
+     */
+    List<Territorio> findByTipoAndCodigoNotNullOrderByNombreAsc(TipoTerritorio tipo);
 }

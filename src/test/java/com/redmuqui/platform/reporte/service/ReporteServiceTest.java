@@ -152,14 +152,14 @@ class ReporteServiceTest {
     void coberturaTerritorialFusionaAgregadosYRellenaConCeros() {
         Territorio cajamarca = territorio(1L, "Cajamarca", "06");
         Territorio callao = territorio(2L, "Callao", "07"); // sin actividad → todo en cero
-        when(territorioRepository.findByTipoOrderByNombreAsc(TipoTerritorio.DEPARTAMENTO))
+        when(territorioRepository.findByTipoAndCodigoNotNullOrderByNombreAsc(TipoTerritorio.DEPARTAMENTO))
             .thenReturn(List.of(cajamarca, callao));
         when(proyectoRepository.agregarPorTerritorio())
             .thenReturn(List.<Object[]>of(new Object[]{1L, 3L, 150_000.0}));
         when(proyectoRepository.contarInstitucionesPorTerritorio())
             .thenReturn(List.<Object[]>of(new Object[]{1L, 2L}));
         when(subactividadRepository.beneficiariosPorTerritorio())
-            .thenReturn(List.<Object[]>of(new Object[]{1L, 500L}));
+            .thenReturn(List.<Object[]>of(new Object[]{1L, 300L, 200L}));
 
         List<CoberturaTerritorialDTO> cobertura = service().coberturaTerritorial(TipoTerritorio.DEPARTAMENTO);
 
@@ -171,13 +171,15 @@ class ReporteServiceTest {
         assertThat(caj.proyectos()).isEqualTo(3L);
         assertThat(caj.presupuesto()).isEqualTo(150_000.0);
         assertThat(caj.beneficiarios()).isEqualTo(500L);
+        assertThat(caj.beneficiariosHombres()).isEqualTo(300L);
+        assertThat(caj.beneficiariosMujeres()).isEqualTo(200L);
         assertThat(caj.instituciones()).isEqualTo(2L);
 
         CoberturaTerritorialDTO cal = cobertura.get(1);
         assertThat(cal.codigo()).isEqualTo("07");
         assertThat(cal.proyectos()).isZero();
-        assertThat(cal.presupuesto()).isZero();
         assertThat(cal.beneficiarios()).isZero();
+        assertThat(cal.beneficiariosMujeres()).isZero();
         assertThat(cal.instituciones()).isZero();
     }
 
