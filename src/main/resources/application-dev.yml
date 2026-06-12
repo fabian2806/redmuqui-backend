@@ -8,11 +8,18 @@
 spring:
   jpa:
     show-sql: true
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 20MB
 
 app:
   security:
     enabled: false   # Desactiva Spring Security en endpoints (ver SecurityConfig)
     method-enabled: false   # Desactiva @PreAuthorize/@Secured en dev
+  s3:
+    bucket: ${AWS_S3_BUCKET:dummy-bucket}
+    region: ${AWS_REGION:us-east-1}
 
 logging:
   level:
