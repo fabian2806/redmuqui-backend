@@ -19,6 +19,7 @@ import java.util.Locale;
  * RF-085 Filtrar por macroregión  (idMacroregion)
  * RF-086 Filtrar por eje temático (idEjeTematico)
  * RF-087 Filtrar por institución  (idInstitucion)
+ * Filtrar por territorio          (idTerritorio)
  * Año de inicio                   (anio)
  */
 public final class ProyectoSpecification {
@@ -35,7 +36,8 @@ public final class ProyectoSpecification {
         Long idMacroregion,
         Long idEjeTematico,
         Long idInstitucion,
-        Integer anio
+        Integer anio,
+        Long idTerritorio
     ) {
         Specification<Proyecto> spec = Specification.where(null);
 
@@ -80,6 +82,18 @@ public final class ProyectoSpecification {
                     root.join("instituciones", JoinType.LEFT)
                         .get("institucion").get("id"),
                     idInstitucion
+                );
+            });
+        }
+
+        if (idTerritorio != null) {
+            spec = spec.and((root, query, cb) -> {
+                if (Long.class != query.getResultType()) {
+                    query.distinct(true);
+                }
+                return cb.equal(
+                    root.join("territorios", JoinType.LEFT).get("id"),
+                    idTerritorio
                 );
             });
         }

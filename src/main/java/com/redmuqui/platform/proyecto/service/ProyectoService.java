@@ -67,10 +67,11 @@ public class ProyectoService {
         Long idEjeTematico,
         Long idInstitucion,
         Integer anio,
+        Long idTerritorio,
         Pageable pageable
     ) {
         Specification<Proyecto> filtros = ProyectoSpecification.construir(
-            q, estado, idMacroregion, idEjeTematico, idInstitucion, anio
+            q, estado, idMacroregion, idEjeTematico, idInstitucion, anio, idTerritorio
         );
         return proyectoRepository.findAll(filtros, pageable).map(mapper::toResponseDTO);
     }
