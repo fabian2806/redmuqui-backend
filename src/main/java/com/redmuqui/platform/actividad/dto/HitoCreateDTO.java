@@ -9,7 +9,11 @@ import java.time.LocalDate;
 public record HitoCreateDTO(
     @NotBlank String nombre,
     String descripcion,
-    @NotNull LocalDate fechaClave,
+    LocalDate fechaClave,
     EstadoHito estado,
-    Long idProyecto
+    Long idProyecto,
+    @NotNull Long idFase,
+    @NotNull java.util.Set<Long> idsActividades,
+    LocalDate fechaCumplimientoReal,
+    String motivoReprogramacion
 ) {}

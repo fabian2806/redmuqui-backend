@@ -31,6 +31,15 @@ public class SubactividadArchivo {
     @JoinColumn(name = "id_subactividad", nullable = false)
     private Subactividad subactividad;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 30)
+    @Builder.Default
+    private EstadoEvidencia estado = EstadoEvidencia.EN_REVISION;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_usuario_carga", nullable = false)
+    private com.redmuqui.platform.usuario.entity.Usuario usuarioCarga;
+
     @CreatedDate
     @Column(name = "fecha_creacion", nullable = false, updatable = false)
     private LocalDateTime fechaCreacion;

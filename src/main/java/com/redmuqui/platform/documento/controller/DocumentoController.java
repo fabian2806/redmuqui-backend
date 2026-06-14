@@ -4,7 +4,9 @@ import com.redmuqui.platform.common.dto.PageResponse;
 import com.redmuqui.platform.documento.dto.*;
 import com.redmuqui.platform.documento.entity.EstadoDocumento;
 import com.redmuqui.platform.documento.service.ArchivoService;
+import com.redmuqui.platform.documento.service.DocumentoComentarioService;
 import com.redmuqui.platform.documento.service.DocumentoService;
+import com.redmuqui.platform.documento.service.DocumentoVersionService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +20,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.net.URI;
 import java.util.List;
+import java.time.LocalDate;
 
 @RestController
 @RequestMapping("/api/v1/documentos")
@@ -27,11 +30,21 @@ public class DocumentoController {
 
     private final DocumentoService service;
     private final ArchivoService archivoService;
+    private final DocumentoVersionService versionService;
+    private final DocumentoComentarioService comentarioService;
 
     @GetMapping
     @PreAuthorize("hasAuthority('DOCUMENTOS_READ')")
-    public ResponseEntity<PageResponse<DocumentoResponseDTO>> listar(Pageable pageable) {
-        return ResponseEntity.ok(PageResponse.from(service.listar(pageable)));
+    public ResponseEntity<PageResponse<DocumentoResponseDTO>> listar(
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) Long idProyecto,
+            @RequestParam(required = false) LocalDate fechaDesde,
+            @RequestParam(required = false) LocalDate fechaHasta,
+            @RequestParam(required = false) EstadoDocumento estado,
+            Pageable pageable) {
+        return ResponseEntity.ok(PageResponse.from(
+            service.listar(q, idProyecto, fechaDesde, fechaHasta, estado, pageable)
+        ));
     }
 
     @GetMapping("/{id}")
@@ -68,6 +81,29 @@ public class DocumentoController {
     @PreAuthorize("hasAuthority('DOCUMENTOS_READ')")
     public ResponseEntity<List<ArchivoDTO>> listarArchivos(@PathVariable Long id) {
         return ResponseEntity.ok(archivoService.listarPorDocumento(id));
+    }
+
+    @GetMapping("/{id}/versiones")
+    @PreAuthorize("hasAuthority('DOCUMENTOS_READ')")
+    public ResponseEntity<List<DocumentoVersionDTO>> listarVersiones(@PathVariable Long id) {
+        service.obtener(id);
+        return ResponseEntity.ok(versionService.listar(id));
+    }
+
+    @GetMapping("/{id}/comentarios")
+    @PreAuthorize("hasAuthority('DOCUMENTOS_READ')")
+    public ResponseEntity<PageResponse<DocumentoComentarioDTO>> listarComentarios(
+            @PathVariable Long id,
+            Pageable pageable) {
+        return ResponseEntity.ok(comentarioService.listar(id, pageable));
+    }
+
+    @PostMapping("/{id}/comentarios")
+    @PreAuthorize("hasAnyAuthority('DOCUMENTOS_UPDATE','DOCUMENTOS_VALIDATE')")
+    public ResponseEntity<DocumentoComentarioDTO> comentar(
+            @PathVariable Long id,
+            @Valid @RequestBody DocumentoComentarioRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(comentarioService.crear(id, request));
     }
 
     @PostMapping(

@@ -29,6 +29,9 @@ public class Hito extends Auditable {
     @Column(name = "fecha_clave", nullable = false)
     private LocalDate fechaClave;
 
+    @Column(name = "fecha_cumplimiento_real")
+    private LocalDate fechaCumplimientoReal;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     @Builder.Default
@@ -37,4 +40,8 @@ public class Hito extends Auditable {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_proyecto", nullable = false)
     private Proyecto proyecto;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_fase", nullable = false)
+    private Fase fase;
 }

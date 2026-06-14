@@ -13,6 +13,9 @@ import com.redmuqui.platform.proyecto.mapper.ProyectoMapper;
 import com.redmuqui.platform.proyecto.repository.ProyectoRepository;
 import com.redmuqui.platform.territorio.repository.TerritorioRepository;
 import com.redmuqui.platform.usuario.repository.UsuarioRepository;
+import com.redmuqui.platform.actividad.repository.ActividadRepository;
+import com.redmuqui.platform.actividad.repository.SubactividadRepository;
+import com.redmuqui.platform.actividad.repository.FaseRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -46,6 +49,9 @@ class ProyectoServiceTest {
     @Mock private TerritorioRepository territorioRepository;
     @Mock private InstitucionRepository institucionRepository;
     @Mock private ProyectoMapper mapper;
+    @Mock private ActividadRepository actividadRepository;
+    @Mock private SubactividadRepository subactividadRepository;
+    @Mock private FaseRepository faseRepository;
 
     @InjectMocks private ProyectoService service;
 

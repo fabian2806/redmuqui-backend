@@ -11,4 +11,5 @@ import java.util.Optional;
 public interface ArchivoRepository extends JpaRepository<Archivo, Long> {
     List<Archivo> findByDocumentoId(Long idDocumento);
     Optional<Archivo> findByIdAndDocumentoId(Long idArchivo, Long idDocumento);
+    boolean existsByDocumentoId(Long idDocumento);
 }

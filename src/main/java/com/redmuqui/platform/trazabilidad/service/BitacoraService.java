@@ -32,17 +32,33 @@ public class BitacoraService {
     private final UsuarioRepository usuarioRepository;
 
     @Transactional(readOnly = true)
+    public Page<BitacoraConsultaDTO> consultarGeneral(String q, Pageable pageable) {
+        return (q == null || q.isBlank()
+            ? bitacoraRepository.findAllByOrderByFechaDesc(pageable)
+            : bitacoraRepository.buscar(q.trim(), pageable))
+            .map(this::toConsultaDTO);
+    }
+
     public Page<BitacoraConsultaDTO> consultarGeneral(Pageable pageable) {
-        return bitacoraRepository.findAllByOrderByFechaDesc(pageable).map(this::toConsultaDTO);
+        return consultarGeneral(null, pageable);
     }
 
     @Transactional(readOnly = true)
     public Page<BitacoraConsultaDTO> consultarHistorialEntidad(
+        String entidadReferenciada, Long idEntidadRef, String q, Pageable pageable
+    ) {
+        return (q == null || q.isBlank()
+            ? bitacoraRepository.findByEntidadReferenciadaAndIdEntidadRefOrderByFechaDesc(
+                entidadReferenciada, idEntidadRef, pageable)
+            : bitacoraRepository.buscarEntidad(
+                entidadReferenciada, idEntidadRef, q.trim(), pageable))
+            .map(this::toConsultaDTO);
+    }
+
+    public Page<BitacoraConsultaDTO> consultarHistorialEntidad(
         String entidadReferenciada, Long idEntidadRef, Pageable pageable
     ) {
-        return bitacoraRepository
-            .findByEntidadReferenciadaAndIdEntidadRefOrderByFechaDesc(entidadReferenciada, idEntidadRef, pageable)
-            .map(this::toConsultaDTO);
+        return consultarHistorialEntidad(entidadReferenciada, idEntidadRef, null, pageable);
     }
 
     /**

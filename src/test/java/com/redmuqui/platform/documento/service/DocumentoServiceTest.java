@@ -2,12 +2,20 @@ package com.redmuqui.platform.documento.service;
 
 import com.redmuqui.platform.common.exception.BusinessException;
 import com.redmuqui.platform.common.exception.ResourceNotFoundException;
+import com.redmuqui.platform.common.audit.AuthenticatedUserService;
 import com.redmuqui.platform.documento.dto.DocumentoCreateDTO;
 import com.redmuqui.platform.documento.dto.DocumentoResponseDTO;
 import com.redmuqui.platform.documento.dto.DocumentoUpdateDTO;
 import com.redmuqui.platform.documento.entity.Documento;
 import com.redmuqui.platform.documento.entity.EstadoDocumento;
 import com.redmuqui.platform.documento.repository.DocumentoRepository;
+import com.redmuqui.platform.documento.repository.ArchivoRepository;
+import com.redmuqui.platform.actividad.repository.SubactividadRepository;
+import com.redmuqui.platform.actividad.service.AvanceProyectoService;
+import com.redmuqui.platform.actividad.entity.Actividad;
+import com.redmuqui.platform.actividad.entity.EstadoSubactividad;
+import com.redmuqui.platform.actividad.entity.Subactividad;
+import com.redmuqui.platform.documento.entity.TipoVinculoDocumento;
 import com.redmuqui.platform.ejetematico.entity.EjeTematico;
 import com.redmuqui.platform.ejetematico.repository.EjeTematicoRepository;
 import com.redmuqui.platform.proyecto.entity.Proyecto;
@@ -52,6 +60,11 @@ class DocumentoServiceTest {
     @Mock private EjeTematicoRepository ejeTematicoRepository;
     @Mock private UsuarioRepository usuarioRepository;
     @Mock private TerritorioRepository territorioRepository;
+    @Mock private AuthenticatedUserService authenticatedUserService;
+    @Mock private DocumentoVersionService documentoVersionService;
+    @Mock private SubactividadRepository subactividadRepository;
+    @Mock private ArchivoRepository archivoRepository;
+    @Mock private AvanceProyectoService avanceProyectoService;
 
     @InjectMocks private DocumentoService service;
 
@@ -67,7 +80,7 @@ class DocumentoServiceTest {
                                    Long idRespElab, Long idRespVal, Set<Long> territorios) {
         return new DocumentoCreateDTO(
             "Informe de prueba", "Descripcion", tipo, estado,
-            null, null, idProyecto, idEje, idRespElab, idRespVal, territorios);
+            null, null, idProyecto, null, null, idEje, idRespElab, idRespVal, territorios);
     }
 
     private DocumentoUpdateDTO updateDto(String tipo, EstadoDocumento estado,
@@ -75,7 +88,7 @@ class DocumentoServiceTest {
         return new DocumentoUpdateDTO(
             "Informe actualizado", "Nueva descripción", tipo, estado,
             null, null, LocalDate.of(2025, 6, 1),
-            null, null, idRespElab, idRespVal, null);
+            null, null, null, null, idRespElab, idRespVal, null);
     }
 
     /** Instala un Authentication con las authorities indicadas en el SecurityContext. */
@@ -92,14 +105,20 @@ class DocumentoServiceTest {
 
     /** Crea un Documento stub con el estado indicado y lo registra en el repo mock. */
     private Documento documentoStubEnEstado(EstadoDocumento estado) {
+        Usuario validador = mock(Usuario.class);
         Documento doc = Documento.builder()
+            .id(1L)
             .titulo("Stub")
             .tipo("Informe")
             .estado(estado)
             .fechaCarga(LocalDate.now())
             .version(1.0)
+            .respValidacion(validador)
             .build();
         when(documentoRepository.findById(1L)).thenReturn(Optional.of(doc));
+        org.mockito.Mockito.lenient()
+            .when(archivoRepository.existsByDocumentoId(1L))
+            .thenReturn(true);
         return doc;
     }
 
@@ -122,6 +141,7 @@ class DocumentoServiceTest {
 
         when(usuarioRepository.findById(10L)).thenReturn(Optional.of(respElab));
         when(usuarioRepository.findById(11L)).thenReturn(Optional.of(respVal));
+        when(authenticatedUserService.obtenerUsuario()).thenReturn(respElab);
         when(proyectoRepository.findById(5L)).thenReturn(Optional.of(proyecto));
         when(ejeTematicoRepository.findById(3L)).thenReturn(Optional.of(eje));
         when(territorioRepository.findAllById(any())).thenReturn(List.of(t7, t8));
@@ -145,6 +165,7 @@ class DocumentoServiceTest {
         Usuario respElab = mock(Usuario.class);
         when(respElab.getId()).thenReturn(10L);
         when(usuarioRepository.findById(10L)).thenReturn(Optional.of(respElab));
+        when(authenticatedUserService.obtenerUsuario()).thenReturn(respElab);
         when(documentoRepository.save(any(Documento.class))).thenAnswer(inv -> inv.getArgument(0));
 
         DocumentoResponseDTO result = service.crear(
@@ -279,5 +300,118 @@ class DocumentoServiceTest {
         assertThatThrownBy(() -> service.cambiarEstado(1L, EstadoDocumento.BORRADOR))
             .isInstanceOf(BusinessException.class)
             .hasMessageContaining("no permitida");
+    }
+
+    @Test
+    void publicarEntregableFinalCompletaSubactividadYRecalculaJerarquia() {
+        autenticarCon("DOCUMENTOS_VALIDATE");
+        Actividad actividad = mock(Actividad.class);
+        Proyecto proyecto = mock(Proyecto.class);
+        when(actividad.getId()).thenReturn(20L);
+        when(proyecto.getId()).thenReturn(5L);
+
+        Subactividad subactividad = Subactividad.builder()
+            .id(30L)
+            .nombre("Preparar informe")
+            .actividad(actividad)
+            .costoReal(1200D)
+            .fechaInicioPlanificada(LocalDate.now().minusDays(2))
+            .estado(EstadoSubactividad.EN_CURSO)
+            .porcentajeAvance(50)
+            .build();
+        Documento documento = Documento.builder()
+            .id(1L)
+            .titulo("Entregable final")
+            .tipo("Informe")
+            .estado(EstadoDocumento.EN_REVISION)
+            .fechaCarga(LocalDate.now())
+            .version(2D)
+            .proyecto(proyecto)
+            .subactividad(subactividad)
+            .tipoVinculo(TipoVinculoDocumento.ENTREGABLE_FINAL)
+            .respValidacion(mock(Usuario.class))
+            .build();
+        when(documentoRepository.findById(1L)).thenReturn(Optional.of(documento));
+        when(archivoRepository.existsByDocumentoId(1L)).thenReturn(true);
+
+        DocumentoResponseDTO result = service.cambiarEstado(1L, EstadoDocumento.PUBLICADO);
+
+        assertThat(result.estado()).isEqualTo(EstadoDocumento.PUBLICADO);
+        assertThat(result.idSubactividad()).isEqualTo(30L);
+        assertThat(subactividad.getEstado()).isEqualTo(EstadoSubactividad.FINALIZADA);
+        assertThat(subactividad.getPorcentajeAvance()).isEqualTo(100);
+        assertThat(subactividad.getFechaFinReal()).isEqualTo(LocalDate.now());
+        verify(avanceProyectoService).recalcularActividad(20L);
+    }
+
+    @Test
+    void devolverEntregableARevisionReabreSubactividad() {
+        autenticarCon("DOCUMENTOS_VALIDATE");
+        Actividad actividad = mock(Actividad.class);
+        Proyecto proyecto = mock(Proyecto.class);
+        when(actividad.getId()).thenReturn(20L);
+        when(proyecto.getId()).thenReturn(5L);
+
+        Subactividad subactividad = Subactividad.builder()
+            .id(30L)
+            .nombre("Preparar informe")
+            .actividad(actividad)
+            .costoReal(1200D)
+            .fechaInicioPlanificada(LocalDate.now().minusDays(2))
+            .fechaFinReal(LocalDate.now())
+            .estado(EstadoSubactividad.FINALIZADA)
+            .porcentajeAvance(100)
+            .build();
+        Documento documento = Documento.builder()
+            .id(1L)
+            .titulo("Entregable final")
+            .tipo("Informe")
+            .estado(EstadoDocumento.PUBLICADO)
+            .fechaCarga(LocalDate.now())
+            .version(3D)
+            .proyecto(proyecto)
+            .subactividad(subactividad)
+            .tipoVinculo(TipoVinculoDocumento.ENTREGABLE_FINAL)
+            .respValidacion(mock(Usuario.class))
+            .build();
+        when(documentoRepository.findById(1L)).thenReturn(Optional.of(documento));
+
+        service.cambiarEstado(1L, EstadoDocumento.EN_REVISION);
+
+        assertThat(subactividad.getEstado()).isEqualTo(EstadoSubactividad.EN_CURSO);
+        assertThat(subactividad.getPorcentajeAvance()).isEqualTo(50);
+        assertThat(subactividad.getFechaFinReal()).isNull();
+        verify(avanceProyectoService).recalcularActividad(20L);
+    }
+
+    @Test
+    void publicarEntregableSinCostoRealEsRechazado() {
+        autenticarCon("DOCUMENTOS_VALIDATE");
+        Actividad actividad = mock(Actividad.class);
+        Subactividad subactividad = Subactividad.builder()
+            .id(30L)
+            .nombre("Preparar informe")
+            .actividad(actividad)
+            .fechaInicioPlanificada(LocalDate.now().minusDays(1))
+            .estado(EstadoSubactividad.EN_CURSO)
+            .build();
+        Documento documento = Documento.builder()
+            .id(1L)
+            .titulo("Entregable final")
+            .tipo("Informe")
+            .estado(EstadoDocumento.EN_REVISION)
+            .fechaCarga(LocalDate.now())
+            .version(2D)
+            .subactividad(subactividad)
+            .tipoVinculo(TipoVinculoDocumento.ENTREGABLE_FINAL)
+            .respValidacion(mock(Usuario.class))
+            .build();
+        when(documentoRepository.findById(1L)).thenReturn(Optional.of(documento));
+        when(archivoRepository.existsByDocumentoId(1L)).thenReturn(true);
+
+        assertThatThrownBy(() -> service.cambiarEstado(1L, EstadoDocumento.PUBLICADO))
+            .isInstanceOf(BusinessException.class)
+            .hasMessageContaining("costo real");
+        verify(avanceProyectoService, never()).recalcularActividad(any());
     }
 }

@@ -33,6 +33,13 @@ public class Subactividad extends Auditable {
     @Builder.Default
     private Double presupuesto = 0.0;
 
+    @Column(name = "costo_real")
+    private Double costoReal;
+
+    @Column(name = "porcentaje_avance", nullable = false)
+    @Builder.Default
+    private Integer porcentajeAvance = 0;
+
     @Column(name = "hombres_involucrados", columnDefinition = "INTEGER DEFAULT 0")
     @Builder.Default
     private Integer hombresInvolucrados = 0;
@@ -41,11 +48,17 @@ public class Subactividad extends Auditable {
     @Builder.Default
     private Integer mujeresInvolucradas = 0;
 
-    @Column(name = "fecha_inicio")
-    private LocalDate fechaInicio;
+    @Column(name = "fecha_inicio_planificada")
+    private LocalDate fechaInicioPlanificada;
 
-    @Column(name = "fecha_fin")
-    private LocalDate fechaFin;
+    @Column(name = "fecha_fin_planificada")
+    private LocalDate fechaFinPlanificada;
+
+    @Column(name = "fecha_inicio_real")
+    private LocalDate fechaInicioReal;
+
+    @Column(name = "fecha_fin_real")
+    private LocalDate fechaFinReal;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)

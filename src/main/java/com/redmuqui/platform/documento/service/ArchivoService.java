@@ -3,14 +3,16 @@ package com.redmuqui.platform.documento.service;
 import com.redmuqui.platform.documento.dto.ArchivoDTO;
 import com.redmuqui.platform.documento.entity.Archivo;
 import com.redmuqui.platform.documento.entity.Documento;
+import com.redmuqui.platform.documento.entity.EstadoDocumento;
 import com.redmuqui.platform.documento.repository.ArchivoRepository;
 import com.redmuqui.platform.documento.repository.DocumentoRepository;
+import com.redmuqui.platform.common.exception.BusinessException;
+import com.redmuqui.platform.common.audit.AuthenticatedUserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.server.ResponseStatusException;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.text.Normalizer;
@@ -40,6 +42,8 @@ public class ArchivoService {
     private final ArchivoRepository archivoRepository;
     private final DocumentoRepository documentoRepository;
     private final S3StorageService s3StorageService;
+    private final AuthenticatedUserService authenticatedUserService;
+    private final DocumentoVersionService documentoVersionService;
 
     public List<ArchivoDTO> listarPorDocumento(Long documentoId) {
         verificarDocumentoExiste(documentoId);
@@ -50,12 +54,17 @@ public class ArchivoService {
                 .toList();
     }
 
+    @Transactional
     public ArchivoDTO adjuntarArchivo(Long documentoId, MultipartFile archivo, String descripcion) {
         Documento documento = documentoRepository.findById(documentoId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
                         "Documento no encontrado."
                 ));
+        if (documento.getEstado() == EstadoDocumento.PUBLICADO) {
+            throw new BusinessException(
+                "Debe devolver el documento a revisión antes de cargar una nueva versión.");
+        }
 
         validarArchivo(archivo);
 
@@ -75,10 +84,15 @@ public class ArchivoService {
                 .tipoContenido(archivo.getContentType())
                 .descripcion(descripcion)
                 .tamanioBytes(archivo.getSize())
+                .numeroVersion(siguienteVersion(documento))
+                .usuarioCarga(authenticatedUserService.obtenerUsuario())
                 .documento(documento)
                 .build();
 
         Archivo guardado = archivoRepository.save(nuevoArchivo);
+        documento.setVersion(guardado.getNumeroVersion().doubleValue());
+        documentoRepository.save(documento);
+        documentoVersionService.registrar(documento, "Carga del archivo " + nombreOriginal);
 
         return toDTO(guardado);
     }
@@ -101,6 +115,8 @@ public class ArchivoService {
                 .tipoContenido(dto.tipoContenido())
                 .descripcion(dto.descripcion())
                 .tamanioBytes(dto.tamanioBytes() != null ? dto.tamanioBytes() : 0L)
+                .numeroVersion(siguienteVersion(documento))
+                .usuarioCarga(authenticatedUserService.obtenerUsuario())
                 .documento(documento)
                 .build();
 
@@ -200,8 +216,17 @@ public class ArchivoService {
                 archivo.getExtension(),
                 archivo.getTipoContenido(),
                 archivo.getDescripcion(),
-                archivo.getTamanioBytes()
+                archivo.getTamanioBytes(),
+                archivo.getNumeroVersion(),
+                archivo.getUsuarioCarga() != null ? archivo.getUsuarioCarga().getId() : null,
+                archivo.getUsuarioCarga() != null
+                    ? (archivo.getUsuarioCarga().getNombres() + " " + archivo.getUsuarioCarga().getApellidos()).trim()
+                    : null
         );
+    }
+
+    private int siguienteVersion(Documento documento) {
+        return (int) Math.floor(documento.getVersion() == null ? 0D : documento.getVersion()) + 1;
     }
 
     public String generarUrlDescarga(Long documentoId, Long archivoId) {
