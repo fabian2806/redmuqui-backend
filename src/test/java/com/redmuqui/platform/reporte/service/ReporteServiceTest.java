@@ -9,9 +9,13 @@ import com.redmuqui.platform.documento.repository.DocumentoRepository;
 import com.redmuqui.platform.proyecto.entity.EstadoProyecto;
 import com.redmuqui.platform.proyecto.entity.Proyecto;
 import com.redmuqui.platform.proyecto.repository.ProyectoRepository;
+import com.redmuqui.platform.reporte.dto.CoberturaTerritorialDTO;
 import com.redmuqui.platform.reporte.dto.ConteoDTO;
 import com.redmuqui.platform.reporte.dto.IndicadoresDTO;
 import com.redmuqui.platform.reporte.dto.ProyectoRiesgoDTO;
+import com.redmuqui.platform.territorio.entity.Territorio;
+import com.redmuqui.platform.territorio.entity.TipoTerritorio;
+import com.redmuqui.platform.territorio.repository.TerritorioRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -34,6 +38,7 @@ class ReporteServiceTest {
     @Mock private SubactividadRepository subactividadRepository;
     @Mock private DocumentoRepository documentoRepository;
     @Mock private HitoRepository hitoRepository;
+    @Mock private TerritorioRepository territorioRepository;
 
     private ReporteService service() {
         return new ReporteService(
@@ -41,7 +46,8 @@ class ReporteServiceTest {
             actividadRepository,
             subactividadRepository,
             documentoRepository,
-            hitoRepository
+            hitoRepository,
+            territorioRepository
         );
     }
 
@@ -140,5 +146,49 @@ class ReporteServiceTest {
         when(hitoRepository.contarHitosVencidosPorProyecto(any())).thenReturn(List.of());
 
         assertThat(service().proyectosEnRiesgo()).isEmpty();
+    }
+
+    @Test
+    void coberturaTerritorialFusionaAgregadosYRellenaConCeros() {
+        Territorio cajamarca = territorio(1L, "Cajamarca", "06");
+        Territorio callao = territorio(2L, "Callao", "07"); // sin actividad → todo en cero
+        when(territorioRepository.findByTipoAndCodigoNotNullOrderByNombreAsc(TipoTerritorio.DEPARTAMENTO))
+            .thenReturn(List.of(cajamarca, callao));
+        when(proyectoRepository.agregarPorTerritorio())
+            .thenReturn(List.<Object[]>of(new Object[]{1L, 3L, 150_000.0}));
+        when(proyectoRepository.contarInstitucionesPorTerritorio())
+            .thenReturn(List.<Object[]>of(new Object[]{1L, 2L}));
+        when(subactividadRepository.beneficiariosPorTerritorio())
+            .thenReturn(List.<Object[]>of(new Object[]{1L, 300L, 200L}));
+
+        List<CoberturaTerritorialDTO> cobertura = service().coberturaTerritorial(TipoTerritorio.DEPARTAMENTO);
+
+        assertThat(cobertura).hasSize(2);
+
+        CoberturaTerritorialDTO caj = cobertura.get(0);
+        assertThat(caj.codigo()).isEqualTo("06");
+        assertThat(caj.tipo()).isEqualTo("DEPARTAMENTO");
+        assertThat(caj.proyectos()).isEqualTo(3L);
+        assertThat(caj.presupuesto()).isEqualTo(150_000.0);
+        assertThat(caj.beneficiarios()).isEqualTo(500L);
+        assertThat(caj.beneficiariosHombres()).isEqualTo(300L);
+        assertThat(caj.beneficiariosMujeres()).isEqualTo(200L);
+        assertThat(caj.instituciones()).isEqualTo(2L);
+
+        CoberturaTerritorialDTO cal = cobertura.get(1);
+        assertThat(cal.codigo()).isEqualTo("07");
+        assertThat(cal.proyectos()).isZero();
+        assertThat(cal.beneficiarios()).isZero();
+        assertThat(cal.beneficiariosMujeres()).isZero();
+        assertThat(cal.instituciones()).isZero();
+    }
+
+    private Territorio territorio(long id, String nombre, String codigo) {
+        Territorio t = new Territorio();
+        t.setId(id);
+        t.setNombre(nombre);
+        t.setCodigo(codigo);
+        t.setTipo(TipoTerritorio.DEPARTAMENTO);
+        return t;
     }
 }
