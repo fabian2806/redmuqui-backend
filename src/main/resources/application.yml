@@ -61,9 +61,11 @@ app:
     # por entorno, igual que JWT_SECRET. Sin GEMINI_API_KEY el endpoint devuelve un
     # resumen-plantilla (generadoPorIa=false) en vez de fallar.
     api-key: ${GEMINI_API_KEY:}
-    model: ${GEMINI_MODEL:gemini-2.0-flash}
+    model: ${GEMINI_MODEL:gemini-2.5-flash}
     base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com/v1beta}
     timeout-ms: ${GEMINI_TIMEOUT_MS:30000}
+    # Reintentos ante errores transitorios de Gemini (503 "high demand", red). No aplica a 429.
+    max-reintentos: ${GEMINI_MAX_REINTENTOS:2}
 
 aws:
   region: ${AWS_REGION:us-east-1}
