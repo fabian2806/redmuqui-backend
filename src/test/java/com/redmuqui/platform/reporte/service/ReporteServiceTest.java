@@ -16,6 +16,7 @@ import com.redmuqui.platform.reporte.dto.ProyectoRiesgoDTO;
 import com.redmuqui.platform.territorio.entity.Territorio;
 import com.redmuqui.platform.territorio.entity.TipoTerritorio;
 import com.redmuqui.platform.territorio.repository.TerritorioRepository;
+import com.redmuqui.platform.trazabilidad.repository.BitacoraRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -39,6 +40,7 @@ class ReporteServiceTest {
     @Mock private DocumentoRepository documentoRepository;
     @Mock private HitoRepository hitoRepository;
     @Mock private TerritorioRepository territorioRepository;
+    @Mock private BitacoraRepository bitacoraRepository;
 
     private ReporteService service() {
         return new ReporteService(
@@ -47,7 +49,8 @@ class ReporteServiceTest {
             subactividadRepository,
             documentoRepository,
             hitoRepository,
-            territorioRepository
+            territorioRepository,
+            bitacoraRepository
         );
     }
 

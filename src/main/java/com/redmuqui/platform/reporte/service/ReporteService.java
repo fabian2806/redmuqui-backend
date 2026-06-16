@@ -9,14 +9,20 @@ import com.redmuqui.platform.documento.repository.DocumentoRepository;
 import com.redmuqui.platform.proyecto.entity.EstadoProyecto;
 import com.redmuqui.platform.proyecto.entity.Proyecto;
 import com.redmuqui.platform.proyecto.repository.ProyectoRepository;
+import com.redmuqui.platform.reporte.dto.ActividadRecienteDTO;
 import com.redmuqui.platform.reporte.dto.CoberturaTerritorialDTO;
 import com.redmuqui.platform.reporte.dto.ConteoDTO;
+import com.redmuqui.platform.reporte.dto.ConteoPresupuestoDTO;
 import com.redmuqui.platform.reporte.dto.DocumentoRecienteDTO;
 import com.redmuqui.platform.reporte.dto.IndicadoresDTO;
+import com.redmuqui.platform.reporte.dto.MacroregionResumenDTO;
+import com.redmuqui.platform.reporte.dto.ProyectoAvanceDTO;
 import com.redmuqui.platform.reporte.dto.ProyectoRiesgoDTO;
 import com.redmuqui.platform.territorio.entity.TipoTerritorio;
 import com.redmuqui.platform.territorio.repository.TerritorioRepository;
+import com.redmuqui.platform.trazabilidad.repository.BitacoraRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +30,7 @@ import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -48,6 +55,7 @@ public class ReporteService {
     private final DocumentoRepository documentoRepository;
     private final HitoRepository hitoRepository;
     private final TerritorioRepository territorioRepository;
+    private final BitacoraRepository bitacoraRepository;
 
     @Transactional(readOnly = true)
     public IndicadoresDTO obtenerIndicadores() {
@@ -67,6 +75,62 @@ public class ReporteService {
     public List<ConteoDTO> proyectosPorMacroregion() {
         return proyectoRepository.contarPorMacroregion().stream()
             .map(fila -> new ConteoDTO((String) fila[0], ((Number) fila[1]).longValue()))
+            .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ConteoDTO> proyectosPorEstado() {
+        Map<EstadoProyecto, Long> conteos = new HashMap<>();
+        for (Proyecto proyecto : proyectoRepository.findAll()) {
+            conteos.merge(proyecto.getEstado(), 1L, Long::sum);
+        }
+
+        return List.of(
+            new ConteoDTO("En ejecucion", conteos.getOrDefault(EstadoProyecto.ACTIVO, 0L)),
+            new ConteoDTO("Finalizados", conteos.getOrDefault(EstadoProyecto.CERRADO, 0L)),
+            new ConteoDTO("Suspendidos", conteos.getOrDefault(EstadoProyecto.SUSPENDIDO, 0L))
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public List<ConteoPresupuestoDTO> proyectosPorEjeTematico() {
+        Map<String, ConteoPresupuestoAccumulator> resumen = new HashMap<>();
+        for (Proyecto proyecto : proyectoRepository.findAll()) {
+            String eje = proyecto.getEjeTematico() == null
+                ? "Sin eje tematico"
+                : proyecto.getEjeTematico().getNombre();
+            ConteoPresupuestoAccumulator acc = resumen.computeIfAbsent(eje, key -> new ConteoPresupuestoAccumulator());
+            acc.cantidad++;
+            acc.presupuesto += proyecto.getPresupuesto() == null ? 0.0 : proyecto.getPresupuesto();
+        }
+
+        return resumen.entrySet().stream()
+            .sorted(Map.Entry.<String, ConteoPresupuestoAccumulator>comparingByValue(
+                Comparator.comparingLong(acc -> acc.cantidad)
+            ).reversed())
+            .map(entry -> new ConteoPresupuestoDTO(
+                entry.getKey(),
+                entry.getValue().cantidad,
+                entry.getValue().presupuesto
+            ))
+            .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProyectoAvanceDTO> avanceProyectos() {
+        return proyectoRepository.findAll().stream()
+            .sorted(Comparator.comparingDouble(p -> p.getPorcentajeAvance() == null ? 0.0 : p.getPorcentajeAvance()))
+            .map(p -> new ProyectoAvanceDTO(
+                p.getId(),
+                p.getNombre(),
+                p.getMacroregiones().stream()
+                    .map(m -> m.getNombre())
+                    .sorted()
+                    .findFirst()
+                    .orElse("Sin macroregion"),
+                p.getEstado(),
+                p.getPorcentajeAvance() == null ? 0.0 : p.getPorcentajeAvance()
+            ))
             .toList();
     }
 
@@ -135,6 +199,77 @@ public class ReporteService {
             .toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<ConteoDTO> documentosPorTipo() {
+        Map<String, Long> conteos = new HashMap<>();
+        documentoRepository.findAll().forEach(d ->
+            conteos.merge(d.getTipo() == null ? "Sin tipo" : d.getTipo(), 1L, Long::sum)
+        );
+
+        return conteos.entrySet().stream()
+            .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
+            .map(entry -> new ConteoDTO(entry.getKey(), entry.getValue()))
+            .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ConteoDTO> documentosPorEstado() {
+        Map<EstadoDocumento, Long> conteos = new HashMap<>();
+        documentoRepository.findAll().forEach(d -> conteos.merge(d.getEstado(), 1L, Long::sum));
+
+        return List.of(
+            new ConteoDTO("Borrador", conteos.getOrDefault(EstadoDocumento.BORRADOR, 0L)),
+            new ConteoDTO("En revision", conteos.getOrDefault(EstadoDocumento.EN_REVISION, 0L)),
+            new ConteoDTO("Publicados", conteos.getOrDefault(EstadoDocumento.PUBLICADO, 0L))
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public List<MacroregionResumenDTO> resumenMacroregiones() {
+        Map<String, MacroregionAccumulator> resumen = new LinkedHashMap<>();
+
+        for (Proyecto proyecto : proyectoRepository.findAll()) {
+            List<String> macroregiones = proyecto.getMacroregiones().stream()
+                .map(m -> m.getNombre())
+                .sorted()
+                .toList();
+            if (macroregiones.isEmpty()) {
+                macroregiones = List.of("Sin macroregion");
+            }
+
+            for (String nombre : macroregiones) {
+                MacroregionAccumulator acc = resumen.computeIfAbsent(nombre, key -> new MacroregionAccumulator());
+                acc.totalProyectos++;
+                if (proyecto.getEstado() == EstadoProyecto.ACTIVO) acc.activos++;
+                if (proyecto.getEstado() == EstadoProyecto.CERRADO) acc.finalizados++;
+                proyecto.getInstituciones().forEach(pi -> acc.instituciones.put(pi.getInstitucion().getId(), true));
+            }
+        }
+
+        return resumen.entrySet().stream()
+            .map(entry -> new MacroregionResumenDTO(
+                entry.getKey(),
+                entry.getValue().totalProyectos,
+                entry.getValue().activos,
+                entry.getValue().finalizados,
+                entry.getValue().instituciones.size()
+            ))
+            .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ActividadRecienteDTO> actividadReciente() {
+        return bitacoraRepository.findAllByOrderByFechaDesc(PageRequest.of(0, 10)).getContent().stream()
+            .map(b -> new ActividadRecienteDTO(
+                b.getUsuario() == null ? "Sistema" : b.getUsuario().getNombres() + " " + b.getUsuario().getApellidos(),
+                b.getDescripcion(),
+                b.getTipoAccion(),
+                b.getEntidadReferenciada(),
+                b.getFecha()
+            ))
+            .toList();
+    }
+
     /**
      * Cobertura de la red por unidad territorial del nivel pedido (hoy: departamento),
      * para el Mapa Territorial (Sprint 4 ④). Parte de TODOS los territorios del nivel
@@ -182,5 +317,17 @@ public class ReporteService {
                 );
             })
             .toList();
+    }
+
+    private static class MacroregionAccumulator {
+        long totalProyectos;
+        long activos;
+        long finalizados;
+        Map<Long, Boolean> instituciones = new HashMap<>();
+    }
+
+    private static class ConteoPresupuestoAccumulator {
+        long cantidad;
+        double presupuesto;
     }
 }

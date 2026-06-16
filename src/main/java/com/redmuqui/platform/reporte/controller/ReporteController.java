@@ -1,9 +1,13 @@
 package com.redmuqui.platform.reporte.controller;
 
+import com.redmuqui.platform.reporte.dto.ActividadRecienteDTO;
 import com.redmuqui.platform.reporte.dto.CoberturaTerritorialDTO;
 import com.redmuqui.platform.reporte.dto.ConteoDTO;
+import com.redmuqui.platform.reporte.dto.ConteoPresupuestoDTO;
 import com.redmuqui.platform.reporte.dto.DocumentoRecienteDTO;
 import com.redmuqui.platform.reporte.dto.IndicadoresDTO;
+import com.redmuqui.platform.reporte.dto.MacroregionResumenDTO;
+import com.redmuqui.platform.reporte.dto.ProyectoAvanceDTO;
 import com.redmuqui.platform.reporte.dto.ProyectoRiesgoDTO;
 import com.redmuqui.platform.reporte.service.ReporteService;
 import com.redmuqui.platform.territorio.entity.TipoTerritorio;
@@ -45,6 +49,27 @@ public class ReporteController {
         return ResponseEntity.ok(service.proyectosPorMacroregion());
     }
 
+    @GetMapping("/proyectos-por-estado")
+    @PreAuthorize("hasAuthority('REPORTES_READ')")
+    @Operation(summary = "Conteo de proyectos por estado")
+    public ResponseEntity<List<ConteoDTO>> proyectosPorEstado() {
+        return ResponseEntity.ok(service.proyectosPorEstado());
+    }
+
+    @GetMapping("/proyectos-por-eje")
+    @PreAuthorize("hasAuthority('REPORTES_READ')")
+    @Operation(summary = "Conteo y presupuesto de proyectos por eje tematico")
+    public ResponseEntity<List<ConteoPresupuestoDTO>> proyectosPorEjeTematico() {
+        return ResponseEntity.ok(service.proyectosPorEjeTematico());
+    }
+
+    @GetMapping("/avance-proyectos")
+    @PreAuthorize("hasAuthority('REPORTES_READ')")
+    @Operation(summary = "Resumen de avance fisico por proyecto")
+    public ResponseEntity<List<ProyectoAvanceDTO>> avanceProyectos() {
+        return ResponseEntity.ok(service.avanceProyectos());
+    }
+
     @GetMapping("/actividades-por-estado")
     @PreAuthorize("hasAuthority('REPORTES_READ')")
     @Operation(summary = "Distribución de actividades por estado, con vencidas derivadas (RF-074)")
@@ -64,6 +89,34 @@ public class ReporteController {
     @Operation(summary = "Últimos documentos registrados (RF-072)")
     public ResponseEntity<List<DocumentoRecienteDTO>> documentosRecientes() {
         return ResponseEntity.ok(service.documentosRecientes());
+    }
+
+    @GetMapping("/documentos-por-tipo")
+    @PreAuthorize("hasAuthority('REPORTES_READ')")
+    @Operation(summary = "Conteo de documentos por tipo")
+    public ResponseEntity<List<ConteoDTO>> documentosPorTipo() {
+        return ResponseEntity.ok(service.documentosPorTipo());
+    }
+
+    @GetMapping("/documentos-por-estado")
+    @PreAuthorize("hasAuthority('REPORTES_READ')")
+    @Operation(summary = "Conteo de documentos por estado")
+    public ResponseEntity<List<ConteoDTO>> documentosPorEstado() {
+        return ResponseEntity.ok(service.documentosPorEstado());
+    }
+
+    @GetMapping("/resumen-macroregiones")
+    @PreAuthorize("hasAuthority('REPORTES_READ')")
+    @Operation(summary = "Resumen geografico por macroregion")
+    public ResponseEntity<List<MacroregionResumenDTO>> resumenMacroregiones() {
+        return ResponseEntity.ok(service.resumenMacroregiones());
+    }
+
+    @GetMapping("/actividad-reciente")
+    @PreAuthorize("hasAuthority('REPORTES_READ')")
+    @Operation(summary = "Eventos recientes para el panel de reportes")
+    public ResponseEntity<List<ActividadRecienteDTO>> actividadReciente() {
+        return ResponseEntity.ok(service.actividadReciente());
     }
 
     @GetMapping("/cobertura-territorial")
