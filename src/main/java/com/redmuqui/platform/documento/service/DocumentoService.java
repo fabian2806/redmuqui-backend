@@ -58,6 +58,12 @@ public class DocumentoService {
     }
 
     @Transactional
+    public void eliminar(Long id) {
+        Documento documento = buscarOFallar(id);
+        documentoRepository.delete(documento);
+    }
+
+    @Transactional
     public DocumentoResponseDTO crear(DocumentoCreateDTO dto) {
         // RF-046: el tipo debe ser uno de los valores permitidos.
         String tipo = dto.tipo() != null ? dto.tipo().trim() : null;

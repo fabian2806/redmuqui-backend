@@ -1,10 +1,12 @@
 package com.redmuqui.platform.reporte.service;
 
+import com.redmuqui.platform.actividad.entity.Actividad;
 import com.redmuqui.platform.actividad.entity.EstadoActividad;
 import com.redmuqui.platform.actividad.repository.ActividadRepository;
 import com.redmuqui.platform.actividad.repository.HitoRepository;
 import com.redmuqui.platform.actividad.repository.SubactividadRepository;
 import com.redmuqui.platform.documento.entity.EstadoDocumento;
+import com.redmuqui.platform.documento.entity.Documento;
 import com.redmuqui.platform.documento.repository.DocumentoRepository;
 import com.redmuqui.platform.proyecto.entity.EstadoProyecto;
 import com.redmuqui.platform.proyecto.entity.Proyecto;
@@ -27,6 +29,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -59,29 +62,83 @@ public class ReporteService {
 
     @Transactional(readOnly = true)
     public IndicadoresDTO obtenerIndicadores() {
+        return obtenerIndicadores(null);
+    }
+
+    @Transactional(readOnly = true)
+    public IndicadoresDTO obtenerIndicadores(Integer anio) {
+        if (anio == null) {
+            return new IndicadoresDTO(
+                proyectoRepository.countByEstado(EstadoProyecto.ACTIVO),
+                proyectosEnRiesgo().size(),
+                proyectoRepository.sumPresupuestoByEstado(EstadoProyecto.ACTIVO),
+                proyectoRepository.avgAvanceByEstado(EstadoProyecto.ACTIVO),
+                subactividadRepository.sumHombresInvolucrados(),
+                subactividadRepository.sumMujeresInvolucradas(),
+                documentoRepository.countByEstado(EstadoDocumento.PUBLICADO),
+                documentoRepository.countByEstadoIn(List.of(EstadoDocumento.BORRADOR, EstadoDocumento.EN_REVISION))
+            );
+        }
+
+        List<Proyecto> proyectosActivos = proyectosDelAnio(anio).stream()
+            .filter(p -> p.getEstado() == EstadoProyecto.ACTIVO)
+            .toList();
+        List<Documento> documentos = documentosDelAnio(anio);
+        double presupuesto = proyectosActivos.stream()
+            .mapToDouble(p -> p.getPresupuesto() == null ? 0.0 : p.getPresupuesto())
+            .sum();
+        double avancePromedio = proyectosActivos.stream()
+            .mapToDouble(p -> p.getPorcentajeAvance() == null ? 0.0 : p.getPorcentajeAvance())
+            .average()
+            .orElse(0.0);
+
         return new IndicadoresDTO(
-            proyectoRepository.countByEstado(EstadoProyecto.ACTIVO),
-            proyectosEnRiesgo().size(),
-            proyectoRepository.sumPresupuestoByEstado(EstadoProyecto.ACTIVO),
-            proyectoRepository.avgAvanceByEstado(EstadoProyecto.ACTIVO),
+            proyectosActivos.size(),
+            proyectosEnRiesgo(anio).size(),
+            presupuesto,
+            avancePromedio,
             subactividadRepository.sumHombresInvolucrados(),
             subactividadRepository.sumMujeresInvolucradas(),
-            documentoRepository.countByEstado(EstadoDocumento.PUBLICADO),
-            documentoRepository.countByEstadoIn(List.of(EstadoDocumento.BORRADOR, EstadoDocumento.EN_REVISION))
+            documentos.stream().filter(d -> d.getEstado() == EstadoDocumento.PUBLICADO).count(),
+            documentos.stream()
+                .filter(d -> d.getEstado() == EstadoDocumento.BORRADOR || d.getEstado() == EstadoDocumento.EN_REVISION)
+                .count()
         );
     }
 
     @Transactional(readOnly = true)
     public List<ConteoDTO> proyectosPorMacroregion() {
-        return proyectoRepository.contarPorMacroregion().stream()
-            .map(fila -> new ConteoDTO((String) fila[0], ((Number) fila[1]).longValue()))
+        return proyectosPorMacroregion(null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ConteoDTO> proyectosPorMacroregion(Integer anio) {
+        if (anio == null) {
+            return proyectoRepository.contarPorMacroregion().stream()
+                .map(fila -> new ConteoDTO((String) fila[0], ((Number) fila[1]).longValue()))
+                .toList();
+        }
+
+        Map<String, Long> conteos = new HashMap<>();
+        for (Proyecto proyecto : proyectosDelAnio(anio)) {
+            proyecto.getMacroregiones().forEach(m -> conteos.merge(m.getNombre(), 1L, Long::sum));
+        }
+
+        return conteos.entrySet().stream()
+            .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
+            .map(entry -> new ConteoDTO(entry.getKey(), entry.getValue()))
             .toList();
     }
 
     @Transactional(readOnly = true)
     public List<ConteoDTO> proyectosPorEstado() {
+        return proyectosPorEstado(null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ConteoDTO> proyectosPorEstado(Integer anio) {
         Map<EstadoProyecto, Long> conteos = new HashMap<>();
-        for (Proyecto proyecto : proyectoRepository.findAll()) {
+        for (Proyecto proyecto : proyectosDelAnio(anio)) {
             conteos.merge(proyecto.getEstado(), 1L, Long::sum);
         }
 
@@ -94,8 +151,13 @@ public class ReporteService {
 
     @Transactional(readOnly = true)
     public List<ConteoPresupuestoDTO> proyectosPorEjeTematico() {
+        return proyectosPorEjeTematico(null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ConteoPresupuestoDTO> proyectosPorEjeTematico(Integer anio) {
         Map<String, ConteoPresupuestoAccumulator> resumen = new HashMap<>();
-        for (Proyecto proyecto : proyectoRepository.findAll()) {
+        for (Proyecto proyecto : proyectosDelAnio(anio)) {
             String eje = proyecto.getEjeTematico() == null
                 ? "Sin eje tematico"
                 : proyecto.getEjeTematico().getNombre();
@@ -118,7 +180,12 @@ public class ReporteService {
 
     @Transactional(readOnly = true)
     public List<ProyectoAvanceDTO> avanceProyectos() {
-        return proyectoRepository.findAll().stream()
+        return avanceProyectos(null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProyectoAvanceDTO> avanceProyectos(Integer anio) {
+        return proyectosDelAnio(anio).stream()
             .sorted(Comparator.comparingDouble(p -> p.getPorcentajeAvance() == null ? 0.0 : p.getPorcentajeAvance()))
             .map(p -> new ProyectoAvanceDTO(
                 p.getId(),
@@ -136,7 +203,33 @@ public class ReporteService {
 
     @Transactional(readOnly = true)
     public List<ConteoDTO> actividadesPorEstado() {
+        return actividadesPorEstado(null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ConteoDTO> actividadesPorEstado(Integer anio) {
         LocalDate hoy = LocalDate.now();
+        if (anio != null) {
+            List<Actividad> actividades = actividadRepository.findAll().stream()
+                .filter(a -> enAnio(a.getFechaInicio(), anio) || enAnio(a.getFechaFin(), anio))
+                .toList();
+            return List.of(
+                new ConteoDTO("Finalizadas", actividades.stream().filter(a -> a.getEstado() == EstadoActividad.FINALIZADA).count()),
+                new ConteoDTO("En curso", actividades.stream()
+                    .filter(a -> a.getEstado() == EstadoActividad.EN_CURSO)
+                    .filter(a -> a.getFechaFin() == null || !a.getFechaFin().isBefore(hoy))
+                    .count()),
+                new ConteoDTO("Pendientes", actividades.stream()
+                    .filter(a -> a.getEstado() == EstadoActividad.PENDIENTE)
+                    .filter(a -> a.getFechaFin() == null || !a.getFechaFin().isBefore(hoy))
+                    .count()),
+                new ConteoDTO("Vencidas", actividades.stream()
+                    .filter(a -> a.getFechaFin() != null && a.getFechaFin().isBefore(hoy))
+                    .filter(a -> a.getEstado() != EstadoActividad.FINALIZADA)
+                    .count())
+            );
+        }
+
         return List.of(
             new ConteoDTO("Finalizadas", actividadRepository.countByEstado(EstadoActividad.FINALIZADA)),
             new ConteoDTO("En curso", actividadRepository.countVigentesByEstado(EstadoActividad.EN_CURSO, hoy)),
@@ -147,6 +240,11 @@ public class ReporteService {
 
     @Transactional(readOnly = true)
     public List<ProyectoRiesgoDTO> proyectosEnRiesgo() {
+        return proyectosEnRiesgo(null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProyectoRiesgoDTO> proyectosEnRiesgo(Integer anio) {
         LocalDate hoy = LocalDate.now();
 
         Map<Long, Long> hitosVencidosPorProyecto = new HashMap<>();
@@ -154,7 +252,13 @@ public class ReporteService {
             hitosVencidosPorProyecto.put(((Number) fila[0]).longValue(), ((Number) fila[1]).longValue());
         }
 
-        return proyectoRepository.findByEstado(EstadoProyecto.ACTIVO).stream()
+        List<Proyecto> proyectosActivos = anio == null
+            ? proyectoRepository.findByEstado(EstadoProyecto.ACTIVO)
+            : proyectosDelAnio(anio).stream()
+                .filter(p -> p.getEstado() == EstadoProyecto.ACTIVO)
+                .toList();
+
+        return proyectosActivos.stream()
             .map(p -> {
                 long hitosVencidos = hitosVencidosPorProyecto.getOrDefault(p.getId(), 0L);
                 Long diasRestantes = p.getFechaFinEstimada() == null
@@ -188,7 +292,20 @@ public class ReporteService {
 
     @Transactional(readOnly = true)
     public List<DocumentoRecienteDTO> documentosRecientes() {
-        return documentoRepository.findTop5ByOrderByFechaCreacionDescIdDesc().stream()
+        return documentosRecientes(null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<DocumentoRecienteDTO> documentosRecientes(Integer anio) {
+        List<Documento> documentos = anio == null
+            ? documentoRepository.findTop5ByOrderByFechaCreacionDescIdDesc()
+            : documentosDelAnio(anio);
+
+        return documentos.stream()
+            .sorted(Comparator
+                .comparing(Documento::getFechaCarga, Comparator.nullsLast(Comparator.reverseOrder()))
+                .thenComparing(Documento::getId, Comparator.nullsLast(Comparator.reverseOrder())))
+            .limit(5)
             .map(d -> new DocumentoRecienteDTO(
                 d.getId(),
                 d.getTitulo(),
@@ -201,8 +318,13 @@ public class ReporteService {
 
     @Transactional(readOnly = true)
     public List<ConteoDTO> documentosPorTipo() {
+        return documentosPorTipo(null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ConteoDTO> documentosPorTipo(Integer anio) {
         Map<String, Long> conteos = new HashMap<>();
-        documentoRepository.findAll().forEach(d ->
+        documentosDelAnio(anio).forEach(d ->
             conteos.merge(d.getTipo() == null ? "Sin tipo" : d.getTipo(), 1L, Long::sum)
         );
 
@@ -214,8 +336,13 @@ public class ReporteService {
 
     @Transactional(readOnly = true)
     public List<ConteoDTO> documentosPorEstado() {
+        return documentosPorEstado(null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ConteoDTO> documentosPorEstado(Integer anio) {
         Map<EstadoDocumento, Long> conteos = new HashMap<>();
-        documentoRepository.findAll().forEach(d -> conteos.merge(d.getEstado(), 1L, Long::sum));
+        documentosDelAnio(anio).forEach(d -> conteos.merge(d.getEstado(), 1L, Long::sum));
 
         return List.of(
             new ConteoDTO("Borrador", conteos.getOrDefault(EstadoDocumento.BORRADOR, 0L)),
@@ -226,9 +353,14 @@ public class ReporteService {
 
     @Transactional(readOnly = true)
     public List<MacroregionResumenDTO> resumenMacroregiones() {
+        return resumenMacroregiones(null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<MacroregionResumenDTO> resumenMacroregiones(Integer anio) {
         Map<String, MacroregionAccumulator> resumen = new LinkedHashMap<>();
 
-        for (Proyecto proyecto : proyectoRepository.findAll()) {
+        for (Proyecto proyecto : proyectosDelAnio(anio)) {
             List<String> macroregiones = proyecto.getMacroregiones().stream()
                 .map(m -> m.getNombre())
                 .sorted()
@@ -259,7 +391,14 @@ public class ReporteService {
 
     @Transactional(readOnly = true)
     public List<ActividadRecienteDTO> actividadReciente() {
-        return bitacoraRepository.findAllByOrderByFechaDesc(PageRequest.of(0, 10)).getContent().stream()
+        return actividadReciente(null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ActividadRecienteDTO> actividadReciente(Integer anio) {
+        return bitacoraRepository.findAllByOrderByFechaDesc(PageRequest.of(0, 200)).getContent().stream()
+            .filter(b -> enAnio(b.getFecha(), anio))
+            .limit(10)
             .map(b -> new ActividadRecienteDTO(
                 b.getUsuario() == null ? "Sistema" : b.getUsuario().getNombres() + " " + b.getUsuario().getApellidos(),
                 b.getDescripcion(),
@@ -329,5 +468,25 @@ public class ReporteService {
     private static class ConteoPresupuestoAccumulator {
         long cantidad;
         double presupuesto;
+    }
+
+    private List<Proyecto> proyectosDelAnio(Integer anio) {
+        return proyectoRepository.findAll().stream()
+            .filter(p -> enAnio(p.getFechaInicio(), anio))
+            .toList();
+    }
+
+    private List<Documento> documentosDelAnio(Integer anio) {
+        return documentoRepository.findAll().stream()
+            .filter(d -> enAnio(d.getFechaCarga(), anio))
+            .toList();
+    }
+
+    private boolean enAnio(LocalDate fecha, Integer anio) {
+        return anio == null || (fecha != null && fecha.getYear() == anio);
+    }
+
+    private boolean enAnio(LocalDateTime fecha, Integer anio) {
+        return anio == null || (fecha != null && fecha.getYear() == anio);
     }
 }

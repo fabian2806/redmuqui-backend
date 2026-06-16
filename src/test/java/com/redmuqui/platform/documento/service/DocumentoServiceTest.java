@@ -242,6 +242,25 @@ class DocumentoServiceTest {
     // ─── Tests RF-056 (flujo de estados) ──────────────────────────────────────
 
     @Test
+    void eliminarBorraDocumentoExistente() {
+        Documento doc = documentoStubEnEstado(EstadoDocumento.BORRADOR);
+
+        service.eliminar(1L);
+
+        verify(documentoRepository).delete(doc);
+    }
+
+    @Test
+    void eliminarRechazaDocumentoInexistente() {
+        when(documentoRepository.findById(404L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.eliminar(404L))
+            .isInstanceOf(ResourceNotFoundException.class)
+            .hasMessageContaining("Documento");
+        verify(documentoRepository, never()).delete(any());
+    }
+
+    @Test
     void cambiarEstadoBorradorAEnRevisionValido() {
         autenticarCon("DOCUMENTOS_UPDATE");
         documentoStubEnEstado(EstadoDocumento.BORRADOR);

@@ -38,85 +38,85 @@ public class ReporteController {
     @GetMapping("/indicadores")
     @PreAuthorize("hasAuthority('REPORTES_READ')")
     @Operation(summary = "Indicadores globales de la red para el dashboard (RF-069)")
-    public ResponseEntity<IndicadoresDTO> indicadores() {
-        return ResponseEntity.ok(service.obtenerIndicadores());
+    public ResponseEntity<IndicadoresDTO> indicadores(@RequestParam(name = "anio", required = false) Integer anio) {
+        return ResponseEntity.ok(service.obtenerIndicadores(anio));
     }
 
     @GetMapping("/proyectos-por-macroregion")
     @PreAuthorize("hasAuthority('REPORTES_READ')")
     @Operation(summary = "Conteo de proyectos por macroregión (RF-073)")
-    public ResponseEntity<List<ConteoDTO>> proyectosPorMacroregion() {
-        return ResponseEntity.ok(service.proyectosPorMacroregion());
+    public ResponseEntity<List<ConteoDTO>> proyectosPorMacroregion(@RequestParam(name = "anio", required = false) Integer anio) {
+        return ResponseEntity.ok(service.proyectosPorMacroregion(anio));
     }
 
     @GetMapping("/proyectos-por-estado")
     @PreAuthorize("hasAuthority('REPORTES_READ')")
     @Operation(summary = "Conteo de proyectos por estado")
-    public ResponseEntity<List<ConteoDTO>> proyectosPorEstado() {
-        return ResponseEntity.ok(service.proyectosPorEstado());
+    public ResponseEntity<List<ConteoDTO>> proyectosPorEstado(@RequestParam(name = "anio", required = false) Integer anio) {
+        return ResponseEntity.ok(service.proyectosPorEstado(anio));
     }
 
     @GetMapping("/proyectos-por-eje")
     @PreAuthorize("hasAuthority('REPORTES_READ')")
     @Operation(summary = "Conteo y presupuesto de proyectos por eje tematico")
-    public ResponseEntity<List<ConteoPresupuestoDTO>> proyectosPorEjeTematico() {
-        return ResponseEntity.ok(service.proyectosPorEjeTematico());
+    public ResponseEntity<List<ConteoPresupuestoDTO>> proyectosPorEjeTematico(@RequestParam(name = "anio", required = false) Integer anio) {
+        return ResponseEntity.ok(service.proyectosPorEjeTematico(anio));
     }
 
     @GetMapping("/avance-proyectos")
     @PreAuthorize("hasAuthority('REPORTES_READ')")
     @Operation(summary = "Resumen de avance fisico por proyecto")
-    public ResponseEntity<List<ProyectoAvanceDTO>> avanceProyectos() {
-        return ResponseEntity.ok(service.avanceProyectos());
+    public ResponseEntity<List<ProyectoAvanceDTO>> avanceProyectos(@RequestParam(name = "anio", required = false) Integer anio) {
+        return ResponseEntity.ok(service.avanceProyectos(anio));
     }
 
     @GetMapping("/actividades-por-estado")
     @PreAuthorize("hasAuthority('REPORTES_READ')")
     @Operation(summary = "Distribución de actividades por estado, con vencidas derivadas (RF-074)")
-    public ResponseEntity<List<ConteoDTO>> actividadesPorEstado() {
-        return ResponseEntity.ok(service.actividadesPorEstado());
+    public ResponseEntity<List<ConteoDTO>> actividadesPorEstado(@RequestParam(name = "anio", required = false) Integer anio) {
+        return ResponseEntity.ok(service.actividadesPorEstado(anio));
     }
 
     @GetMapping("/proyectos-en-riesgo")
     @PreAuthorize("hasAuthority('REPORTES_READ')")
     @Operation(summary = "Proyectos activos clasificados en riesgo (RF-071)")
-    public ResponseEntity<List<ProyectoRiesgoDTO>> proyectosEnRiesgo() {
-        return ResponseEntity.ok(service.proyectosEnRiesgo());
+    public ResponseEntity<List<ProyectoRiesgoDTO>> proyectosEnRiesgo(@RequestParam(name = "anio", required = false) Integer anio) {
+        return ResponseEntity.ok(service.proyectosEnRiesgo(anio));
     }
 
     @GetMapping("/documentos-recientes")
     @PreAuthorize("hasAuthority('REPORTES_READ')")
     @Operation(summary = "Últimos documentos registrados (RF-072)")
-    public ResponseEntity<List<DocumentoRecienteDTO>> documentosRecientes() {
-        return ResponseEntity.ok(service.documentosRecientes());
+    public ResponseEntity<List<DocumentoRecienteDTO>> documentosRecientes(@RequestParam(name = "anio", required = false) Integer anio) {
+        return ResponseEntity.ok(service.documentosRecientes(anio));
     }
 
     @GetMapping("/documentos-por-tipo")
     @PreAuthorize("hasAuthority('REPORTES_READ')")
     @Operation(summary = "Conteo de documentos por tipo")
-    public ResponseEntity<List<ConteoDTO>> documentosPorTipo() {
-        return ResponseEntity.ok(service.documentosPorTipo());
+    public ResponseEntity<List<ConteoDTO>> documentosPorTipo(@RequestParam(name = "anio", required = false) Integer anio) {
+        return ResponseEntity.ok(service.documentosPorTipo(anio));
     }
 
     @GetMapping("/documentos-por-estado")
     @PreAuthorize("hasAuthority('REPORTES_READ')")
     @Operation(summary = "Conteo de documentos por estado")
-    public ResponseEntity<List<ConteoDTO>> documentosPorEstado() {
-        return ResponseEntity.ok(service.documentosPorEstado());
+    public ResponseEntity<List<ConteoDTO>> documentosPorEstado(@RequestParam(name = "anio", required = false) Integer anio) {
+        return ResponseEntity.ok(service.documentosPorEstado(anio));
     }
 
     @GetMapping("/resumen-macroregiones")
     @PreAuthorize("hasAuthority('REPORTES_READ')")
     @Operation(summary = "Resumen geografico por macroregion")
-    public ResponseEntity<List<MacroregionResumenDTO>> resumenMacroregiones() {
-        return ResponseEntity.ok(service.resumenMacroregiones());
+    public ResponseEntity<List<MacroregionResumenDTO>> resumenMacroregiones(@RequestParam(name = "anio", required = false) Integer anio) {
+        return ResponseEntity.ok(service.resumenMacroregiones(anio));
     }
 
     @GetMapping("/actividad-reciente")
     @PreAuthorize("hasAuthority('REPORTES_READ')")
     @Operation(summary = "Eventos recientes para el panel de reportes")
-    public ResponseEntity<List<ActividadRecienteDTO>> actividadReciente() {
-        return ResponseEntity.ok(service.actividadReciente());
+    public ResponseEntity<List<ActividadRecienteDTO>> actividadReciente(@RequestParam(name = "anio", required = false) Integer anio) {
+        return ResponseEntity.ok(service.actividadReciente(anio));
     }
 
     @GetMapping("/cobertura-territorial")

@@ -55,6 +55,13 @@ public class DocumentoController {
         return ResponseEntity.ok(service.actualizar(id, dto));
     }
 
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('DOCUMENTOS_UPDATE')")
+    public ResponseEntity<Void> eliminar(@PathVariable Long id) {
+        service.eliminar(id);
+        return ResponseEntity.noContent().build();
+    }
+
     @PatchMapping("/{id}/estado")
     @PreAuthorize("hasAnyAuthority('DOCUMENTOS_UPDATE','DOCUMENTOS_VALIDATE')")
     public ResponseEntity<DocumentoResponseDTO> cambiarEstado(
