@@ -39,6 +39,24 @@ public class Observacion extends Auditable {
     @Builder.Default
     private EstadoObservacion estado = EstadoObservacion.PENDIENTE;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    @Builder.Default
+    private CriticidadIncidencia criticidad = CriticidadIncidencia.MEDIA;
+
+    @Column(name = "fecha_vencimiento", nullable = false)
+    private LocalDateTime fechaVencimiento;
+
+    @Column(name = "fecha_resolucion")
+    private LocalDateTime fechaResolucion;
+
+    @Column(name = "comentario_resolucion", columnDefinition = "TEXT")
+    private String comentarioResolucion;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_usuario_resolucion")
+    private Usuario usuarioResolucion;
+
     @Column(name = "entidad_referenciada", nullable = false, length = 100)
     private String entidadReferenciada;
 
@@ -48,4 +66,8 @@ public class Observacion extends Auditable {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_usuario", nullable = false)
     private Usuario usuario;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_responsable")
+    private Usuario responsable;
 }

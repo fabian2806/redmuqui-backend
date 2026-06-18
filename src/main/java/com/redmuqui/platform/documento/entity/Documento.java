@@ -1,6 +1,7 @@
 package com.redmuqui.platform.documento.entity;
 
 import com.redmuqui.platform.common.audit.Auditable;
+import com.redmuqui.platform.actividad.entity.Subactividad;
 import com.redmuqui.platform.ejetematico.entity.EjeTematico;
 import com.redmuqui.platform.proyecto.entity.Proyecto;
 import com.redmuqui.platform.territorio.entity.Territorio;
@@ -60,8 +61,21 @@ public class Documento extends Auditable {
     private Double version = 1.0;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_usuario_carga", nullable = false)
+    private Usuario usuarioCarga;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_proyecto")
     private Proyecto proyecto;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_subactividad")
+    private Subactividad subactividad;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tipo_vinculo", nullable = false, length = 30)
+    @Builder.Default
+    private TipoVinculoDocumento tipoVinculo = TipoVinculoDocumento.GENERAL;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_eje_tematico")

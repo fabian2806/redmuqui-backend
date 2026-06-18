@@ -22,8 +22,11 @@ public class BitacoraController {
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'COORDINADOR')")
     @Operation(summary = "Listar eventos de auditoría paginados (RF-064)")
-    public ResponseEntity<PageResponse<BitacoraConsultaDTO>> consultarGeneral(Pageable pageable) {
-        return ResponseEntity.ok(PageResponse.from(service.consultarGeneral(pageable)));
+    public ResponseEntity<PageResponse<BitacoraConsultaDTO>> consultarGeneral(
+        @RequestParam(required = false) String q,
+        Pageable pageable
+    ) {
+        return ResponseEntity.ok(PageResponse.from(service.consultarGeneral(q, pageable)));
     }
 
     @GetMapping("/entidades/{entidadReferenciada}/{idEntidadRef}")
@@ -32,10 +35,12 @@ public class BitacoraController {
     public ResponseEntity<PageResponse<BitacoraConsultaDTO>> consultarHistorialEntidad(
         @PathVariable String entidadReferenciada,
         @PathVariable Long idEntidadRef,
+        @RequestParam(required = false) String q,
         Pageable pageable
     ) {
         return ResponseEntity.ok(
-            PageResponse.from(service.consultarHistorialEntidad(entidadReferenciada, idEntidadRef, pageable))
+            PageResponse.from(service.consultarHistorialEntidad(
+                entidadReferenciada, idEntidadRef, q, pageable))
         );
     }
 }

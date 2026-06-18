@@ -1,6 +1,7 @@
 package com.redmuqui.platform.documento.dto;
 
 import com.redmuqui.platform.documento.entity.EstadoDocumento;
+import com.redmuqui.platform.documento.entity.TipoVinculoDocumento;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -17,6 +18,8 @@ public record DocumentoUpdateDTO(
     @Size(max = 500) String enlace,
     @NotNull LocalDate fechaCarga,
     Long idProyecto,
+    Long idSubactividad,
+    TipoVinculoDocumento tipoVinculo,
     Long idEjeTematico,
     @NotNull Long idRespElaboracion,
     Long idRespValidacion,

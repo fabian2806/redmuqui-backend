@@ -14,13 +14,26 @@ public record ProyectoCreateDTO(
     String descripcion,
     String objetivoGeneral,
     @NotNull LocalDate fechaInicio,
-    LocalDate fechaFinEstimada,
+    @NotNull LocalDate fechaFinEstimada,
     EstadoProyecto estado,
     Integer nivelPrioridad,
-    Double presupuesto,
+    @NotNull Double presupuesto,
+    @NotBlank @Size(min = 3, max = 3) String moneda,
     Long idMacroregion,
     Set<Long> idMacroregiones,
     Long idEjeTematico,
     Long idResponsablePrincipal,
     Set<Long> idTerritorios
-) {}
+) {
+    public ProyectoCreateDTO(
+        String nombre, String codigoInterno, String descripcion, String objetivoGeneral,
+        LocalDate fechaInicio, LocalDate fechaFinEstimada, EstadoProyecto estado,
+        Integer nivelPrioridad, Double presupuesto, Long idMacroregion,
+        Set<Long> idMacroregiones, Long idEjeTematico, Long idResponsablePrincipal,
+        Set<Long> idTerritorios
+    ) {
+        this(nombre, codigoInterno, descripcion, objetivoGeneral, fechaInicio, fechaFinEstimada,
+            estado, nivelPrioridad, presupuesto, "PEN", idMacroregion, idMacroregiones,
+            idEjeTematico, idResponsablePrincipal, idTerritorios);
+    }
+}

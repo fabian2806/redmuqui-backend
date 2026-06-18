@@ -4,6 +4,7 @@ import com.redmuqui.platform.actividad.dto.SubactividadCofinanciamientoCreateDTO
 import com.redmuqui.platform.actividad.dto.SubactividadCreateDTO;
 import com.redmuqui.platform.actividad.dto.SubactividadResponseDTO;
 import com.redmuqui.platform.actividad.service.SubactividadService;
+import com.redmuqui.platform.actividad.entity.EstadoEvidencia;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -60,5 +61,16 @@ public class SubactividadController {
             @RequestParam(required = false) Integer hombresInvolucrados,
             @RequestParam(required = false) Integer mujeresInvolucradas) {
         return ResponseEntity.ok(subactividadService.subirEvidencia(subactividadId, file, hombresInvolucrados, mujeresInvolucradas));
+    }
+
+    @PatchMapping("/{subactividadId}/evidencias/{archivoId}/estado")
+    @PreAuthorize("hasAuthority('PROYECTOS_UPDATE')")
+    public ResponseEntity<SubactividadResponseDTO> cambiarEstadoEvidencia(
+            @PathVariable Long subactividadId,
+            @PathVariable Long archivoId,
+            @RequestParam EstadoEvidencia estado) {
+        return ResponseEntity.ok(
+            subactividadService.cambiarEstadoEvidencia(subactividadId, archivoId, estado)
+        );
     }
 }

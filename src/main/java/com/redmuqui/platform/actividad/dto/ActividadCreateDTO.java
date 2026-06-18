@@ -11,10 +11,14 @@ import java.util.Set;
 public record ActividadCreateDTO(
     @NotBlank @Size(max = 255) String nombre,
     String descripcion,
-    LocalDate fechaInicio,
-    LocalDate fechaFin,
+    LocalDate fechaInicioPlanificada,
+    LocalDate fechaFinPlanificada,
     EstadoActividad estado,
     @NotNull Long idProyecto,
-    @NotNull Long idHito,
-    Set<Long> idResponsables
+    @NotNull Long idFase,
+    Long idHito,
+    Set<Long> idResponsables,
+    LocalDate fechaInicioReal,
+    LocalDate fechaFinReal,
+    String motivoReprogramacion
 ) {}

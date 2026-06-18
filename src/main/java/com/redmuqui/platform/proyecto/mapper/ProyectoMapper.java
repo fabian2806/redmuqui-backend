@@ -4,14 +4,21 @@ import com.redmuqui.platform.proyecto.dto.ProyectoResponseDTO;
 import com.redmuqui.platform.proyecto.dto.ProyectoSummaryDTO;
 import com.redmuqui.platform.proyecto.entity.Proyecto;
 import com.redmuqui.platform.usuario.dto.UsuarioSummaryDTO;
+import com.redmuqui.platform.actividad.repository.SubactividadRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.stream.Collectors;
 
 @Component
+@RequiredArgsConstructor
 public class ProyectoMapper {
+
+    private final SubactividadRepository subactividadRepository;
 
     public ProyectoResponseDTO toResponseDTO(Proyecto p) {
         var macroregiones = p.getMacroregiones().stream()
@@ -19,6 +26,12 @@ public class ProyectoMapper {
             .map(m -> new ProyectoResponseDTO.MacroregionRefDTO(m.getId(), m.getNombre()))
             .collect(Collectors.toCollection(LinkedHashSet::new));
         var macroregionPrincipal = macroregiones.stream().findFirst().orElse(null);
+
+        double costoEstimado = subactividadRepository.sumPresupuestoByProyectoId(p.getId());
+        double costoReal = subactividadRepository.sumCostoRealByProyectoId(p.getId());
+        double porcentajeEjecutado = p.getPresupuesto() == null || p.getPresupuesto() <= 0
+            ? 0D
+            : costoReal * 100D / p.getPresupuesto();
 
         return new ProyectoResponseDTO(
             p.getId(),
@@ -31,7 +44,13 @@ public class ProyectoMapper {
             p.getEstado(),
             p.getNivelPrioridad(),
             p.getPorcentajeAvance(),
+            calcularAvancePlanificado(p.getFechaInicio(), p.getFechaFinEstimada()),
             p.getPresupuesto(),
+            p.getMoneda(),
+            costoEstimado,
+            costoReal,
+            porcentajeEjecutado,
+            resolverAlertaPresupuesto(porcentajeEjecutado),
             macroregionPrincipal != null ? macroregionPrincipal.nombre() : null,
             macroregionPrincipal != null ? macroregionPrincipal.id() : null,
             macroregiones,
@@ -56,6 +75,23 @@ public class ProyectoMapper {
                     pi.getTipoParticipacion()))
                 .collect(Collectors.toCollection(LinkedHashSet::new))
         );
+    }
+
+    private double calcularAvancePlanificado(LocalDate inicio, LocalDate fin) {
+        if (inicio == null || fin == null) return 0D;
+        LocalDate hoy = LocalDate.now();
+        if (hoy.isBefore(inicio)) return 0D;
+        if (!hoy.isBefore(fin)) return 100D;
+        long total = Math.max(1, ChronoUnit.DAYS.between(inicio, fin));
+        long transcurrido = ChronoUnit.DAYS.between(inicio, hoy);
+        return Math.max(0D, Math.min(100D, transcurrido * 100D / total));
+    }
+
+    private String resolverAlertaPresupuesto(double porcentaje) {
+        if (porcentaje >= 100D) return "EXCEDIDO";
+        if (porcentaje >= 90D) return "CRITICO";
+        if (porcentaje >= 80D) return "PREVENTIVO";
+        return "NORMAL";
     }
 
     public ProyectoSummaryDTO toSummaryDTO(Proyecto p) {
