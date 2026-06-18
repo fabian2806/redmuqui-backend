@@ -1,7 +1,7 @@
 package com.redmuqui.platform.documento.service;
 
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -17,6 +17,18 @@ import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequ
 import java.io.IOException;
 import java.time.Duration;
 
+/**
+ * OWASP A05 – Security Misconfiguration:
+ *   Eliminado @PostConstruct que imprimía con System.out.println() el nombre del
+ *   bucket S3 y un prefijo de la AWS_ACCESS_KEY_ID en stdout. En contenedores/ECS
+ *   esto queda en logs de infraestructura accesibles. Se reemplaza por log.debug().
+ *
+ * OWASP A03 – Injection (Header Injection):
+ *   El Content-Disposition se construye con el nombre del archivo. Si nombreArchivo
+ *   contiene caracteres de control o comillas, puede romper la cabecera.
+ *   Se sanitiza el nombre antes de usarlo en el header.
+ */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class S3StorageService {
@@ -30,10 +42,14 @@ public class S3StorageService {
     private final S3Presigner s3Presigner;
 
     public String generarUrlDescarga(String keyS3, String nombreArchivo) {
+        // OWASP A03: sanitizar nombre para evitar header injection en Content-Disposition.
+        String nombreSanitizado = sanitizarNombreArchivo(nombreArchivo);
+
         GetObjectRequest getObjectRequest = GetObjectRequest.builder()
                 .bucket(bucket)
                 .key(keyS3)
-                .responseContentDisposition("attachment; filename=\"" + nombreArchivo + "\"")
+                // RFC 5987: usar filename* para caracteres no ASCII; aquí simplificado.
+                .responseContentDisposition("attachment; filename=\"" + nombreSanitizado + "\"")
                 .build();
 
         GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
@@ -41,9 +57,7 @@ public class S3StorageService {
                 .getObjectRequest(getObjectRequest)
                 .build();
 
-        PresignedGetObjectRequest presignedRequest =
-                s3Presigner.presignGetObject(presignRequest);
-
+        PresignedGetObjectRequest presignedRequest = s3Presigner.presignGetObject(presignRequest);
         return presignedRequest.url().toString();
     }
 
@@ -74,14 +88,30 @@ public class S3StorageService {
         return "https://" + bucket + ".s3." + region + ".amazonaws.com/" + key;
     }
 
-    @PostConstruct
-    public void verificarConfiguracion() {
-        String accessKey = System.getenv("AWS_ACCESS_KEY_ID");
+    /**
+     * OWASP A05: reemplaza System.out.println por log.debug() que solo aparece
+     * si logging.level está en DEBUG, y nunca en producción (nivel WARN/INFO).
+     *
+     * NUNCA loguear credenciales AWS completas, ni siquiera prefijos.
+     */
+    // @PostConstruct — ELIMINADO (era un System.out.println con info de infraestructura)
+    // Si necesitas verificar la config al arrancar, usa log.debug:
+    //
+    // @PostConstruct
+    // public void verificarConfiguracion() {
+    //     log.debug("[CONFIG] S3 bucket={} region={}", bucket, region);
+    // }
 
-        System.out.println("S3 bucket usado: " + bucket);
-        System.out.println("S3 region usada: " + region);
-        System.out.println("AWS_ACCESS_KEY_ID leído: " +
-                (accessKey == null ? "null" : accessKey.substring(0, Math.min(4, accessKey.length())) + "****")
-        );
+    /**
+     * Elimina caracteres problemáticos en nombres de archivo para evitar
+     * header injection en el valor de Content-Disposition.
+     */
+    private String sanitizarNombreArchivo(String nombre) {
+        if (nombre == null) return "archivo";
+        // Eliminar comillas, saltos de línea y caracteres de control.
+        return nombre
+                .replaceAll("[\"\\r\\n\\\\]", "_")
+                .replaceAll("[\\x00-\\x1F\\x7F]", "_")
+                .trim();
     }
 }

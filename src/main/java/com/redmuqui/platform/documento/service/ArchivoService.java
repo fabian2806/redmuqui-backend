@@ -28,7 +28,10 @@ public class ArchivoService {
     private static final Set<String> EXTENSIONES_PERMITIDAS = Set.of(
             "pdf",
             "docx",
-            "xlsx"
+            "xlsx",
+            "jpeg",
+            "png",
+            "jpg"
     );
 
     private static final Set<String> TIPOS_PERMITIDOS = Set.of(

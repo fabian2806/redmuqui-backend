@@ -23,8 +23,12 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 
 /**
- * Filtro que extrae el JWT del header Authorization y autentica al usuario en el SecurityContext.
- * Se ejecuta una vez por request, antes de UsernamePasswordAuthenticationFilter.
+ * Filtro que extrae el JWT del header Authorization y autentica al usuario.
+ *
+ * OWASP A09 – Security Logging:
+ *   Eliminado ex.printStackTrace() que volcaba stack traces en stdout (riesgo
+ *   de exponer rutas de clase, versiones de librerías y lógica interna).
+ *   Ahora se usa log.warn() con mensaje descriptivo sin información sensible.
  */
 @Slf4j
 @Component
@@ -64,30 +68,26 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 UserDetails userDetails = userDetailsService.loadUserByUsername(userEmail);
 
-                if (
-                        jwtService.isAccessToken(jwt)
-                                && !tokenRevocationService.isTokenRevoked(jwt)
-                                && jwtService.isTokenValid(jwt, userDetails)
-                ) {
+                if (jwtService.isAccessToken(jwt)
+                        && !tokenRevocationService.isTokenRevoked(jwt)
+                        && jwtService.isTokenValid(jwt, userDetails)) {
+
                     UsernamePasswordAuthenticationToken authToken =
                             new UsernamePasswordAuthenticationToken(
                                     userDetails,
                                     null,
                                     userDetails.getAuthorities()
                             );
-
-                    authToken.setDetails(
-                            new WebAuthenticationDetailsSource().buildDetails(request)
-                    );
-
+                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
                 }
             }
         } catch (JwtException ex) {
-            log.warn("Token JWT inválido o expirado: {}", ex.getMessage());
+            // OWASP A09: warn sin stack trace (el mensaje de jjwt ya es suficiente).
+            log.warn("[SECURITY] Token JWT inválido o expirado: {}", ex.getMessage());
         } catch (Exception ex) {
-            log.warn("Token JWT inválido o expirado: {}", ex.getMessage());
-            ex.printStackTrace();
+            // OWASP A09: loguear con nivel warn; nunca imprimir stack trace en stdout.
+            log.warn("[SECURITY] Error procesando token JWT: {}", ex.getMessage());
         }
 
         filterChain.doFilter(request, response);
