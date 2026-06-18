@@ -12,6 +12,7 @@ import java.util.Optional;
 @Repository
 public interface HitoRepository extends JpaRepository<Hito, Long> {
     List<Hito> findByProyectoIdOrderByFechaClaveAscIdAsc(Long idProyecto);
+    List<Hito> findByFaseIdOrderByFechaClaveAscIdAsc(Long idFase);
 
     Optional<Hito> findByIdAndProyectoId(Long id, Long idProyecto);
 

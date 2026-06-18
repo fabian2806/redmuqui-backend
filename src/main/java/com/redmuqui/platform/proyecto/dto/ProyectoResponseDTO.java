@@ -17,7 +17,13 @@ public record ProyectoResponseDTO(
     EstadoProyecto estado,
     Integer nivelPrioridad,
     Double porcentajeAvance,
+    Double avancePlanificado,
     Double presupuesto,
+    String moneda,
+    Double costoEstimado,
+    Double costoReal,
+    Double porcentajePresupuestoEjecutado,
+    String alertaPresupuesto,
     String nombreMacroregion,
     Long idMacroregion,
     Set<MacroregionRefDTO> macroregiones,
@@ -27,6 +33,20 @@ public record ProyectoResponseDTO(
     Set<TerritorioRefDTO> territorios,
     Set<InstitucionRefDTO> instituciones
 ) {
+    public ProyectoResponseDTO(
+        Long id, String nombre, String codigoInterno, String descripcion, String objetivoGeneral,
+        LocalDate fechaInicio, LocalDate fechaFinEstimada, EstadoProyecto estado,
+        Integer nivelPrioridad, Double porcentajeAvance, Double presupuesto,
+        String nombreMacroregion, Long idMacroregion, Set<MacroregionRefDTO> macroregiones,
+        String nombreEjeTematico, Long idEjeTematico, UsuarioSummaryDTO responsablePrincipal,
+        Set<TerritorioRefDTO> territorios, Set<InstitucionRefDTO> instituciones
+    ) {
+        this(id, nombre, codigoInterno, descripcion, objetivoGeneral, fechaInicio, fechaFinEstimada,
+            estado, nivelPrioridad, porcentajeAvance, 0D, presupuesto, "PEN", 0D, 0D, 0D,
+            "NORMAL", nombreMacroregion, idMacroregion, macroregiones, nombreEjeTematico,
+            idEjeTematico, responsablePrincipal, territorios, instituciones);
+    }
+
     public record MacroregionRefDTO(Long id, String nombre) {}
     public record TerritorioRefDTO(Long id, String nombre) {}
     public record InstitucionRefDTO(Long id, String nombre, String tipoParticipacion) {}

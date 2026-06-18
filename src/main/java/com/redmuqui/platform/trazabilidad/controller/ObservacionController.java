@@ -3,7 +3,9 @@ package com.redmuqui.platform.trazabilidad.controller;
 import com.redmuqui.platform.common.dto.PageResponse;
 import com.redmuqui.platform.trazabilidad.dto.ObservacionRequestDTO;
 import com.redmuqui.platform.trazabilidad.dto.ObservacionResponseDTO;
+import com.redmuqui.platform.trazabilidad.dto.ResolverIncidenciaRequestDTO;
 import com.redmuqui.platform.trazabilidad.service.ObservacionService;
+import com.redmuqui.platform.trazabilidad.entity.EstadoObservacion;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -40,6 +42,26 @@ public class ObservacionController {
         return ResponseEntity.ok(
             PageResponse.from(service.listarPorEntidad(entidadReferenciada, idEntidadReferenciada, pageable))
         );
+    }
+
+    @PatchMapping("/{id}/estado")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'TECNICO', 'COORDINADOR')")
+    @Operation(summary = "Resolver o reabrir una incidencia")
+    public ResponseEntity<ObservacionResponseDTO> cambiarEstado(
+        @PathVariable Long id,
+        @RequestParam EstadoObservacion estado
+    ) {
+        return ResponseEntity.ok(service.cambiarEstado(id, estado));
+    }
+
+    @PatchMapping("/{id}/resolver")
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR', 'TECNICO', 'COORDINADOR')")
+    @Operation(summary = "Resolver una incidencia dejando comentario de levantamiento")
+    public ResponseEntity<ObservacionResponseDTO> resolver(
+        @PathVariable Long id,
+        @Valid @RequestBody ResolverIncidenciaRequestDTO request
+    ) {
+        return ResponseEntity.ok(service.resolver(id, request));
     }
 
 }

@@ -2,6 +2,13 @@ package com.redmuqui.platform.trazabilidad.aspect;
 
 import com.redmuqui.platform.actividad.dto.ActividadResponseDTO;
 import com.redmuqui.platform.actividad.dto.HitoResponseDTO;
+import com.redmuqui.platform.actividad.dto.FaseResponseDTO;
+import com.redmuqui.platform.actividad.dto.SubactividadResponseDTO;
+import com.redmuqui.platform.documento.dto.DocumentoResponseDTO;
+import com.redmuqui.platform.documento.dto.ArchivoDTO;
+import com.redmuqui.platform.documento.dto.DocumentoComentarioDTO;
+import com.redmuqui.platform.documento.repository.DocumentoRepository;
+import com.redmuqui.platform.trazabilidad.dto.ObservacionResponseDTO;
 import com.redmuqui.platform.macroregion.entity.Macroregion;
 import com.redmuqui.platform.macroregion.repository.MacroregionRepository;
 import com.redmuqui.platform.proyecto.dto.ProyectoResponseDTO;
@@ -37,10 +44,15 @@ public class BitacoraAspect {
     static final String MODIFICACION = "MODIFICACION";
     static final String ENTIDAD_PROYECTO = "PROYECTO";
     static final String ENTIDAD_HITO = "HITO";
+    static final String ENTIDAD_FASE = "FASE";
     static final String ENTIDAD_ACTIVIDAD = "ACTIVIDAD";
+    static final String ENTIDAD_SUBACTIVIDAD = "SUBACTIVIDAD";
+    static final String ENTIDAD_DOCUMENTO = "DOCUMENTO";
+    static final String ENTIDAD_INCIDENCIA = "INCIDENCIA";
 
     private final BitacoraService bitacoraService;
     private final ProyectoRepository proyectoRepository;
+    private final DocumentoRepository documentoRepository;
     private final MacroregionRepository  macroregionRepository;
     private final TerritorioRepository  territorioRepository;
 
@@ -107,6 +119,8 @@ public class BitacoraAspect {
             result.id(),
             "Se creó el hito \"" + result.nombre() + "\" del proyecto con ID " + result.idProyecto()
         );
+        registrarSeguro(CREACION, ENTIDAD_PROYECTO, result.idProyecto(),
+            "Se creó el hito \"" + result.nombre() + "\"");
     }
 
     @AfterReturning(
@@ -120,6 +134,8 @@ public class BitacoraAspect {
             result.id(),
             "Se modificó el estado del hito \"" + result.nombre() + "\" a " + result.estado()
         );
+        registrarSeguro(MODIFICACION, ENTIDAD_PROYECTO, result.idProyecto(),
+            "El hito \"" + result.nombre() + "\" cambió a " + result.estado());
     }
 
     @AfterReturning(
@@ -133,6 +149,258 @@ public class BitacoraAspect {
             result.id(),
             "Se creó la actividad \"" + result.nombre() + "\" del proyecto con ID " + result.idProyecto()
         );
+        registrarSeguro(CREACION, ENTIDAD_PROYECTO, result.idProyecto(),
+            "Se creó la actividad \"" + result.nombre() + "\"");
+    }
+
+    @AfterReturning(
+        pointcut = "execution(* com.redmuqui.platform.actividad.service.FaseService.crear(..))",
+        returning = "result"
+    )
+    public void trasCrearFase(JoinPoint joinPoint, FaseResponseDTO result) {
+        registrarSeguro(CREACION, ENTIDAD_FASE, result.id(),
+            "Se creó la fase \"" + result.nombre() + "\"");
+        registrarSeguro(CREACION, ENTIDAD_PROYECTO, result.idProyecto(),
+            "Se creó la fase \"" + result.nombre() + "\"");
+    }
+
+    @AfterReturning(
+        pointcut = "execution(* com.redmuqui.platform.actividad.service.FaseService.actualizar(..))",
+        returning = "result"
+    )
+    public void trasActualizarFase(JoinPoint joinPoint, FaseResponseDTO result) {
+        registrarSeguro(MODIFICACION, ENTIDAD_FASE, result.id(),
+            "Se actualizó la fase \"" + result.nombre() + "\"");
+        registrarSeguro(MODIFICACION, ENTIDAD_PROYECTO, result.idProyecto(),
+            "Se actualizó la fase \"" + result.nombre() + "\"");
+    }
+
+    @AfterReturning("execution(* com.redmuqui.platform.actividad.service.FaseService.eliminar(..))")
+    public void trasEliminarFase(JoinPoint joinPoint) {
+        registrarSeguro("ELIMINACION", ENTIDAD_FASE, (Long) joinPoint.getArgs()[1],
+            "Se eliminó una fase del proyecto con ID " + joinPoint.getArgs()[0]);
+    }
+
+    @AfterReturning(
+        pointcut = "execution(* com.redmuqui.platform.documento.service.DocumentoService.crear(..))",
+        returning = "result"
+    )
+    public void trasCrearDocumento(JoinPoint joinPoint, DocumentoResponseDTO result) {
+        registrarSeguro(CREACION, ENTIDAD_DOCUMENTO, result.id(),
+            "Se creó el documento \"" + result.titulo() + "\"");
+        if (result.idProyecto() != null) {
+            registrarSeguro(CREACION, ENTIDAD_PROYECTO, result.idProyecto(),
+                "Se creó el documento \"" + result.titulo() + "\"");
+        }
+        if (result.idSubactividad() != null) {
+            registrarSeguro(CREACION, ENTIDAD_SUBACTIVIDAD, result.idSubactividad(),
+                "Se vinculó el entregable final \"" + result.titulo() + "\"");
+        }
+    }
+
+    @AfterReturning(
+        pointcut = "execution(* com.redmuqui.platform.documento.service.DocumentoService.actualizar(..))",
+        returning = "result"
+    )
+    public void trasActualizarDocumento(JoinPoint joinPoint, DocumentoResponseDTO result) {
+        registrarSeguro(MODIFICACION, ENTIDAD_DOCUMENTO, result.id(),
+            "Se actualizaron los datos del documento \"" + result.titulo()
+                + "\" y se generó la versión " + result.version());
+        if (result.idProyecto() != null) {
+            registrarSeguro(MODIFICACION, ENTIDAD_PROYECTO, result.idProyecto(),
+                "Se actualizó el documento \"" + result.titulo()
+                    + "\" a la versión " + result.version());
+        }
+    }
+
+    @AfterReturning(
+        pointcut = "execution(* com.redmuqui.platform.documento.service.DocumentoService.cambiarEstado(..))",
+        returning = "result"
+    )
+    public void trasCambiarEstadoDocumento(JoinPoint joinPoint, DocumentoResponseDTO result) {
+        registrarSeguro(MODIFICACION, ENTIDAD_DOCUMENTO, result.id(),
+            "El documento \"" + result.titulo() + "\" cambió al estado " + result.estado());
+        if (result.idProyecto() != null) {
+            registrarSeguro(MODIFICACION, ENTIDAD_PROYECTO, result.idProyecto(),
+                "El documento \"" + result.titulo() + "\" cambió al estado " + result.estado());
+        }
+        if (result.idSubactividad() != null) {
+            String detalle = result.estado() == com.redmuqui.platform.documento.entity.EstadoDocumento.PUBLICADO
+                ? "El entregable final fue publicado y la subactividad se completó automáticamente"
+                : "El entregable final cambió al estado " + result.estado()
+                    + " y se recalculó la subactividad";
+            registrarSeguro(MODIFICACION, ENTIDAD_SUBACTIVIDAD, result.idSubactividad(), detalle);
+        }
+    }
+
+    @AfterReturning(
+        pointcut = "execution(* com.redmuqui.platform.documento.service.ArchivoService.adjuntarArchivo(..))",
+        returning = "result"
+    )
+    public void trasAdjuntarArchivoDocumento(JoinPoint joinPoint, ArchivoDTO result) {
+        Long documentoId = (Long) joinPoint.getArgs()[0];
+        registrarSeguro(MODIFICACION, ENTIDAD_DOCUMENTO, documentoId,
+            "Se cargó el archivo \"" + result.nombre() + "\" como versión " + result.numeroVersion());
+        documentoRepository.findById(documentoId).ifPresent(documento -> {
+            if (documento.getProyecto() != null) {
+                registrarSeguro(MODIFICACION, ENTIDAD_PROYECTO, documento.getProyecto().getId(),
+                    "Se cargó una nueva versión del documento \"" + documento.getTitulo() + "\"");
+            }
+            if (documento.getSubactividad() != null) {
+                registrarSeguro(MODIFICACION, ENTIDAD_SUBACTIVIDAD,
+                    documento.getSubactividad().getId(),
+                    "Se cargó una nueva versión del entregable final");
+            }
+        });
+    }
+
+    @AfterReturning(
+        pointcut = "execution(* com.redmuqui.platform.documento.service.DocumentoComentarioService.crear(..))",
+        returning = "result"
+    )
+    public void trasComentarDocumento(JoinPoint joinPoint, DocumentoComentarioDTO result) {
+        Long documentoId = (Long) joinPoint.getArgs()[0];
+        registrarSeguro(CREACION, ENTIDAD_DOCUMENTO, documentoId,
+            "Se agregó un comentario de revisión al documento");
+    }
+
+    @AfterReturning(
+        pointcut = "execution(* com.redmuqui.platform.actividad.service.HitoService.actualizar(..))",
+        returning = "result"
+    )
+    public void trasActualizarHito(JoinPoint joinPoint, HitoResponseDTO result) {
+        registrarSeguro(MODIFICACION, ENTIDAD_HITO, result.id(),
+            "Se actualizó el hito \"" + result.nombre() + "\"");
+        registrarSeguro(MODIFICACION, ENTIDAD_PROYECTO, result.idProyecto(),
+            "Se actualizó el hito \"" + result.nombre() + "\"");
+    }
+
+    @AfterReturning("execution(* com.redmuqui.platform.actividad.service.HitoService.eliminar(..))")
+    public void trasEliminarHito(JoinPoint joinPoint) {
+        registrarSeguro("ELIMINACION", ENTIDAD_HITO, (Long) joinPoint.getArgs()[1],
+            "Se eliminó un hito del proyecto con ID " + joinPoint.getArgs()[0]);
+    }
+
+    @AfterReturning(
+        pointcut = "execution(* com.redmuqui.platform.actividad.service.ActividadService.actualizar(..)) || "
+            + "execution(* com.redmuqui.platform.actividad.service.ActividadService.cambiarEstado(..)) || "
+            + "execution(* com.redmuqui.platform.actividad.service.ActividadService.actualizarAvance(..))",
+        returning = "result"
+    )
+    public void trasModificarActividad(JoinPoint joinPoint, ActividadResponseDTO result) {
+        registrarSeguro(MODIFICACION, ENTIDAD_ACTIVIDAD, result.id(),
+            "Se modificó la actividad \"" + result.nombre() + "\". Avance real: "
+                                + result.porcentajeAvance() + "%");
+        registrarSeguro(MODIFICACION, ENTIDAD_PROYECTO, result.idProyecto(),
+            "Se modificó la actividad \"" + result.nombre()
+                + "\". Avance real: " + result.porcentajeAvance() + "%");
+    }
+
+    @AfterReturning("execution(* com.redmuqui.platform.actividad.service.ActividadService.eliminar(..))")
+    public void trasEliminarActividad(JoinPoint joinPoint) {
+        Long actividadId = (Long) joinPoint.getArgs()[0];
+        registrarSeguro("ELIMINACION", ENTIDAD_ACTIVIDAD, actividadId,
+            "Se eliminó la actividad con ID " + actividadId);
+    }
+
+    @AfterReturning(
+        pointcut = "execution(* com.redmuqui.platform.actividad.service.SubactividadService.crear(..))",
+        returning = "result"
+    )
+    public void trasCrearSubactividad(JoinPoint joinPoint, SubactividadResponseDTO result) {
+        registrarSeguro(CREACION, ENTIDAD_SUBACTIVIDAD, result.id(),
+            "Se creó la subactividad \"" + result.nombre() + "\" con costo estimado "
+                                + result.presupuesto());
+        registrarSeguro(CREACION, ENTIDAD_PROYECTO, result.idProyecto(),
+            "Se creó la subactividad \"" + result.nombre()
+                + "\" con costo estimado " + result.presupuesto());
+    }
+
+    @AfterReturning(
+        pointcut = "execution(* com.redmuqui.platform.actividad.service.SubactividadService.actualizar(..)) || "
+            + "execution(* com.redmuqui.platform.actividad.service.SubactividadService.subirEvidencia(..)) || "
+            + "execution(* com.redmuqui.platform.actividad.service.SubactividadService.cambiarEstadoEvidencia(..))",
+        returning = "result"
+    )
+    public void trasModificarSubactividad(JoinPoint joinPoint, SubactividadResponseDTO result) {
+        registrarSeguro(MODIFICACION, ENTIDAD_SUBACTIVIDAD, result.id(),
+            "Se modificó la subactividad \"" + result.nombre() + "\". Avance real: "
+                                + result.porcentajeAvance() + "%, costo real: " + result.costoReal());
+        registrarSeguro(MODIFICACION, ENTIDAD_PROYECTO, result.idProyecto(),
+            "Se modificó la subactividad \"" + result.nombre()
+                + "\". Avance real: " + result.porcentajeAvance()
+                + "%, costo real: " + result.costoReal());
+    }
+
+    @AfterReturning("execution(* com.redmuqui.platform.actividad.service.SubactividadService.eliminar(..))")
+    public void trasEliminarSubactividad(JoinPoint joinPoint) {
+        Long subactividadId = (Long) joinPoint.getArgs()[0];
+        registrarSeguro("ELIMINACION", ENTIDAD_SUBACTIVIDAD, subactividadId,
+            "Se eliminó la subactividad con ID " + subactividadId);
+    }
+
+    @AfterReturning(
+        pointcut = "execution(* com.redmuqui.platform.trazabilidad.service.ObservacionService.crear(..))",
+        returning = "result"
+    )
+    public void trasCrearIncidencia(JoinPoint joinPoint, ObservacionResponseDTO result) {
+        registrarSeguro(CREACION, ENTIDAD_INCIDENCIA, result.id(),
+            "Se registró una incidencia " + result.criticidad()
+                                + " con vencimiento " + result.fechaVencimiento());
+        if (ENTIDAD_PROYECTO.equalsIgnoreCase(result.entidadReferenciada())) {
+            registrarSeguro(CREACION, ENTIDAD_PROYECTO, result.idEntidadReferenciada(),
+                "Se registró una incidencia " + result.criticidad()
+                    + " con vencimiento " + result.fechaVencimiento());
+        }
+    }
+
+    @AfterReturning(
+        pointcut = "execution(* com.redmuqui.platform.trazabilidad.service.ObservacionService.cambiarEstado(..)) || "
+            + "execution(* com.redmuqui.platform.trazabilidad.service.ObservacionService.resolver(..))",
+        returning = "result"
+    )
+    public void trasCambiarEstadoIncidencia(JoinPoint joinPoint, ObservacionResponseDTO result) {
+        String detalle = result.estado() == com.redmuqui.platform.trazabilidad.entity.EstadoObservacion.RESUELTA
+            ? "La incidencia fue resuelta por " + result.nombreUsuarioResolucion()
+                + ". Comentario: " + result.comentarioResolucion()
+            : "La incidencia cambió al estado " + result.estado();
+        registrarSeguro(MODIFICACION, ENTIDAD_INCIDENCIA, result.id(), detalle);
+        if (ENTIDAD_PROYECTO.equalsIgnoreCase(result.entidadReferenciada())) {
+            registrarSeguro(MODIFICACION, ENTIDAD_PROYECTO, result.idEntidadReferenciada(),
+                detalle);
+        }
+    }
+
+    @AfterReturning("execution(* com.redmuqui.platform.proyecto.service.ProyectoService.eliminarMiembro(..))")
+    public void trasEliminarMiembro(JoinPoint joinPoint) {
+        Long proyectoId = (Long) joinPoint.getArgs()[0];
+        registrarSeguro(MODIFICACION, ENTIDAD_PROYECTO, proyectoId,
+            "Se retiró un miembro del equipo del proyecto");
+    }
+
+    @AfterReturning("execution(* com.redmuqui.platform.proyecto.service.ProyectoService.actualizarRolMiembro(..))")
+    public void trasActualizarRolMiembro(JoinPoint joinPoint) {
+        Long proyectoId = (Long) joinPoint.getArgs()[0];
+        registrarSeguro(MODIFICACION, ENTIDAD_PROYECTO, proyectoId,
+            "Se actualizó el rol de un miembro del equipo a " + joinPoint.getArgs()[2]);
+    }
+
+    @AfterReturning("execution(* com.redmuqui.platform.proyecto.service.ProyectoService.asociarInstituciones(..))")
+    public void trasAsociarInstituciones(JoinPoint joinPoint) {
+        Long proyectoId = (Long) joinPoint.getArgs()[0];
+        registrarSeguro(MODIFICACION, ENTIDAD_PROYECTO, proyectoId,
+            "Se actualizaron las instituciones asociadas al proyecto");
+    }
+
+    @AfterReturning(
+        pointcut = "execution(* com.redmuqui.platform.proyecto.service.ProyectoService.cambiarEstado(..)) || "
+            + "execution(* com.redmuqui.platform.proyecto.service.ProyectoService.actualizarAvance(..))",
+        returning = "result"
+    )
+    public void trasModificarSeguimientoProyecto(JoinPoint joinPoint, ProyectoResponseDTO result) {
+        registrarSeguro(MODIFICACION, ENTIDAD_PROYECTO, result.id(),
+            "Se actualizó el seguimiento del proyecto. Estado: " + result.estado()
+                + ", avance real: " + result.porcentajeAvance() + "%");
     }
 
 //    @AfterReturning(

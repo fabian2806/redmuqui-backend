@@ -43,7 +43,7 @@ public class Proyecto extends Auditable {
     @Column(name = "fecha_inicio", nullable = false)
     private LocalDate fechaInicio;
 
-    @Column(name = "fecha_fin_estimada")
+    @Column(name = "fecha_fin_estimada", nullable = false)
     private LocalDate fechaFinEstimada;
 
     @Enumerated(EnumType.STRING)
@@ -58,7 +58,12 @@ public class Proyecto extends Auditable {
     @Builder.Default
     private Double porcentajeAvance = 0.0;
 
+    @Column(nullable = false)
     private Double presupuesto;
+
+    @Column(nullable = false, length = 3)
+    @Builder.Default
+    private String moneda = "PEN";
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(

@@ -15,6 +15,7 @@ import com.redmuqui.platform.proyecto.dto.ProyectoCreateDTO;
 import com.redmuqui.platform.proyecto.dto.ProyectoResponseDTO;
 import com.redmuqui.platform.proyecto.dto.ProyectoTerritorioRequestDTO;
 import com.redmuqui.platform.proyecto.dto.ProyectoUpdateDTO;
+import com.redmuqui.platform.proyecto.dto.OrganigramaProyectoDTO;
 import com.redmuqui.platform.proyecto.entity.EstadoProyecto;
 import com.redmuqui.platform.proyecto.entity.Proyecto;
 import com.redmuqui.platform.proyecto.entity.ProyectoEquipo;
@@ -25,6 +26,10 @@ import com.redmuqui.platform.proyecto.specification.ProyectoSpecification;
 import com.redmuqui.platform.territorio.entity.Territorio;
 import com.redmuqui.platform.territorio.repository.TerritorioRepository;
 import com.redmuqui.platform.usuario.repository.UsuarioRepository;
+import com.redmuqui.platform.usuario.entity.Usuario;
+import com.redmuqui.platform.actividad.repository.ActividadRepository;
+import com.redmuqui.platform.actividad.repository.SubactividadRepository;
+import com.redmuqui.platform.actividad.repository.FaseRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -58,6 +63,9 @@ public class ProyectoService {
     private final TerritorioRepository territorioRepository;
     private final InstitucionRepository institucionRepository;
     private final ProyectoMapper mapper;
+    private final ActividadRepository actividadRepository;
+    private final SubactividadRepository subactividadRepository;
+    private final FaseRepository faseRepository;
 
     @Transactional(readOnly = true)
     public Page<ProyectoResponseDTO> listar(
@@ -106,6 +114,7 @@ public class ProyectoService {
             .estado(dto.estado() != null ? dto.estado() : EstadoProyecto.ACTIVO)
             .nivelPrioridad(dto.nivelPrioridad())
             .presupuesto(dto.presupuesto())
+            .moneda(dto.moneda().toUpperCase(java.util.Locale.ROOT))
             .porcentajeAvance(0.0)
             .build();
 
@@ -137,7 +146,24 @@ public class ProyectoService {
         }
 
         validarRangoFechas(dto.fechaInicio(), dto.fechaFinEstimada());
+        boolean dejaFaseFuera = faseRepository.findByProyectoIdOrderByFechaInicioPlanificadaAscIdAsc(id)
+            .stream()
+            .anyMatch(fase -> fase.getFechaInicioPlanificada().isBefore(dto.fechaInicio())
+                || fase.getFechaFinPlanificada().isAfter(dto.fechaFinEstimada()));
+        if (dejaFaseFuera) {
+            throw new BusinessException(
+                "No se puede reducir el periodo del proyecto porque dejaría fases fuera"
+            );
+        }
         validarPorcentajeAvance(dto.porcentajeAvance());
+        String nuevaMoneda = dto.moneda().toUpperCase(java.util.Locale.ROOT);
+        if (!proyecto.getMoneda().equalsIgnoreCase(nuevaMoneda)
+            && (subactividadRepository.sumPresupuestoByProyectoId(id) > 0
+                || subactividadRepository.sumCostoRealByProyectoId(id) > 0)) {
+            throw new BusinessException(
+                "No se puede cambiar la moneda de un proyecto que ya tiene costos registrados"
+            );
+        }
 
         proyecto.setNombre(dto.nombre());
         proyecto.setCodigoInterno(dto.codigoInterno());
@@ -149,6 +175,7 @@ public class ProyectoService {
         proyecto.setNivelPrioridad(dto.nivelPrioridad());
         if (dto.porcentajeAvance() != null) proyecto.setPorcentajeAvance(dto.porcentajeAvance());
         proyecto.setPresupuesto(dto.presupuesto());
+        proyecto.setMoneda(nuevaMoneda);
 
         Set<Long> idsMacroregiones = resolverIdsMacroregiones(dto.idMacroregion(), dto.idMacroregiones());
         proyecto.setMacroregiones(cargarMacroregionesOFallar(idsMacroregiones));
@@ -283,6 +310,49 @@ public class ProyectoService {
         Proyecto proyecto = buscarOFallar(idProyecto);
         Set<Territorio> territorios = cargarTerritoriosOFallar(dto.getTerritoriosIds());
         proyecto.setTerritorios(territorios);
+    }
+
+    @Transactional(readOnly = true)
+    public OrganigramaProyectoDTO obtenerOrganigrama(Long idProyecto) {
+        Proyecto proyecto = buscarOFallar(idProyecto);
+        OrganigramaProyectoDTO.PersonaNodo responsableProyecto = proyecto.getResponsablePrincipal() == null
+            ? null
+            : persona(proyecto.getResponsablePrincipal(), "Responsable del proyecto");
+
+        var fases = faseRepository.findByProyectoIdOrderByFechaInicioPlanificadaAscIdAsc(idProyecto)
+            .stream()
+            .map(fase -> new OrganigramaProyectoDTO.FaseNodo(
+                fase.getId(),
+                fase.getNombre(),
+                actividadRepository.findByFaseIdOrderByFechaInicioPlanificadaAscIdAsc(fase.getId())
+                    .stream()
+                    .map(actividad -> new OrganigramaProyectoDTO.ActividadNodo(
+                        actividad.getId(),
+                        actividad.getNombre(),
+                        actividad.getResponsables().stream()
+                            .map(usuario -> persona(usuario, "Responsable de actividad"))
+                            .toList(),
+                        subactividadRepository.findByActividadId(actividad.getId()).stream()
+                            .map(subactividad -> new OrganigramaProyectoDTO.SubactividadNodo(
+                                subactividad.getId(),
+                                subactividad.getNombre(),
+                                persona(subactividad.getResponsable(), "Responsable de subactividad")
+                            ))
+                            .toList()
+                    ))
+                    .toList()
+            ))
+            .toList();
+        return new OrganigramaProyectoDTO(responsableProyecto, fases);
+    }
+
+    private OrganigramaProyectoDTO.PersonaNodo persona(Usuario usuario, String rol) {
+        String nombre = (usuario.getNombres() + " " + usuario.getApellidos()).trim();
+        return new OrganigramaProyectoDTO.PersonaNodo(
+            usuario.getId(),
+            nombre.isBlank() ? usuario.getEmail() : nombre,
+            rol
+        );
     }
 
     private Proyecto buscarOFallar(Long id) {

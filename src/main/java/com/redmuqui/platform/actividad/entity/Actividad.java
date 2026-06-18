@@ -31,11 +31,17 @@ public class Actividad extends Auditable {
     @Column(columnDefinition = "TEXT")
     private String descripcion;
 
-    @Column(name = "fecha_inicio")
-    private LocalDate fechaInicio;
+    @Column(name = "fecha_inicio_planificada")
+    private LocalDate fechaInicioPlanificada;
 
-    @Column(name = "fecha_fin")
-    private LocalDate fechaFin;
+    @Column(name = "fecha_fin_planificada")
+    private LocalDate fechaFinPlanificada;
+
+    @Column(name = "fecha_inicio_real")
+    private LocalDate fechaInicioReal;
+
+    @Column(name = "fecha_fin_real")
+    private LocalDate fechaFinReal;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
@@ -49,6 +55,10 @@ public class Actividad extends Auditable {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_hito")
     private Hito hito;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_fase", nullable = false)
+    private Fase fase;
 
     @Column(name = "porcentaje_avance", columnDefinition = "INTEGER DEFAULT 0")
     @Builder.Default
