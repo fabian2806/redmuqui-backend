@@ -1,10 +1,14 @@
 package com.redmuqui.platform.usuario.service;
 
+import com.redmuqui.platform.auth.dto.TokenResponse;
+import com.redmuqui.platform.auth.service.JwtService;
 import com.redmuqui.platform.common.exception.DuplicateResourceException;
 import com.redmuqui.platform.common.exception.ResourceNotFoundException;
 import com.redmuqui.platform.institucion.repository.InstitucionRepository;
 import com.redmuqui.platform.rol.repository.RolRepository;
 import com.redmuqui.platform.usuario.dto.UsuarioCreateDTO;
+import com.redmuqui.platform.usuario.dto.UsuarioPerfilUpdateDTO;
+import com.redmuqui.platform.usuario.dto.UsuarioPerfilUpdateResponseDTO;
 import com.redmuqui.platform.usuario.dto.UsuarioResponseDTO;
 import com.redmuqui.platform.usuario.dto.UsuarioUpdateDTO;
 import com.redmuqui.platform.usuario.entity.Usuario;
@@ -13,6 +17,8 @@ import com.redmuqui.platform.usuario.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +32,8 @@ public class UsuarioService {
     private final InstitucionRepository institucionRepository;
     private final PasswordEncoder passwordEncoder;
     private final UsuarioMapper mapper;
+    private final JwtService jwtService;
+    private final UserDetailsService userDetailsService;
 
     @Transactional(readOnly = true)
     public Page<UsuarioResponseDTO> listar(Pageable pageable) {
@@ -95,6 +103,33 @@ public class UsuarioService {
             : null);
 
         return mapper.toResponseDTO(usuario);
+    }
+
+    @Transactional
+    public UsuarioPerfilUpdateResponseDTO actualizarPerfil(String emailActual, UsuarioPerfilUpdateDTO dto) {
+        Usuario usuario = usuarioRepository.findByEmailIgnoreCase(emailActual)
+            .orElseThrow(() -> new ResourceNotFoundException("Usuario", emailActual));
+
+        if (!usuario.getEmail().equalsIgnoreCase(dto.email())
+            && usuarioRepository.existsByEmailIgnoreCase(dto.email())) {
+            throw new DuplicateResourceException("Ya existe un usuario con el correo: " + dto.email());
+        }
+
+        usuario.setNombres(dto.nombres());
+        usuario.setApellidos(dto.apellidos());
+        usuario.setEmail(dto.email());
+        usuario.setTelefono(dto.telefono());
+        usuarioRepository.flush();
+
+        UsuarioResponseDTO usuarioActualizado = mapper.toResponseDTO(usuario);
+        UserDetails userDetails = userDetailsService.loadUserByUsername(usuario.getEmail());
+        TokenResponse tokens = TokenResponse.of(
+            jwtService.generateAccessToken(userDetails),
+            jwtService.generateRefreshToken(userDetails),
+            jwtService.getAccessTokenExpirationMs()
+        );
+
+        return new UsuarioPerfilUpdateResponseDTO(usuarioActualizado, tokens);
     }
 
     @Transactional

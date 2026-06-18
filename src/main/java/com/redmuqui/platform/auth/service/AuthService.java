@@ -34,6 +34,7 @@ public class AuthService {
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
     private final TokenRevocationService tokenRevocationService;
+    private final EmailService emailService;
     private static final int MAX_INTENTOS_LOGIN = 5;
     private static final int MINUTOS_BLOQUEO = 10;
 
@@ -158,8 +159,12 @@ public class AuthService {
         Usuario usuario = usuarioRepository.findByEmailIgnoreCase(email).orElse(null);
         if (usuario != null) {
             String resetToken = jwtService.generatePasswordResetToken(email);
-            log.info("Token de reseteo generado para {}: {}", email, resetToken);
-            log.info("Enlace de reseteo (placeholder): https://app.redmuqui.com/reset-password?token={}", resetToken);
+            try {
+                emailService.enviarRecuperacionContrasenha(usuario.getEmail(), resetToken);
+                log.info("Correo de recuperacion enviado a {}", usuario.getEmail());
+            } catch (Exception ex) {
+                log.error("No se pudo enviar el correo de recuperacion a {}", usuario.getEmail(), ex);
+            }
         }
     }
 

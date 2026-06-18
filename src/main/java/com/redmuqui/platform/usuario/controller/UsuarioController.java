@@ -2,6 +2,8 @@ package com.redmuqui.platform.usuario.controller;
 
 import com.redmuqui.platform.common.dto.PageResponse;
 import com.redmuqui.platform.usuario.dto.UsuarioCreateDTO;
+import com.redmuqui.platform.usuario.dto.UsuarioPerfilUpdateDTO;
+import com.redmuqui.platform.usuario.dto.UsuarioPerfilUpdateResponseDTO;
 import com.redmuqui.platform.usuario.dto.UsuarioResponseDTO;
 import com.redmuqui.platform.usuario.dto.UsuarioUpdateDTO;
 import com.redmuqui.platform.usuario.service.UsuarioService;
@@ -37,6 +39,19 @@ public class UsuarioController {
     @GetMapping("/me")
     @Operation(summary = "Información del usuario autenticado (RF-006)")
     public ResponseEntity<UsuarioResponseDTO> obtenerPropio(Authentication authentication) {
+        return ResponseEntity.ok(usuarioService.obtenerPorEmail(obtenerEmailAutenticado(authentication)));
+    }
+
+    @PutMapping("/me")
+    @Operation(summary = "Actualizar datos personales del usuario autenticado")
+    public ResponseEntity<UsuarioPerfilUpdateResponseDTO> actualizarPropio(
+        Authentication authentication,
+        @Valid @RequestBody UsuarioPerfilUpdateDTO dto
+    ) {
+        return ResponseEntity.ok(usuarioService.actualizarPerfil(obtenerEmailAutenticado(authentication), dto));
+    }
+
+    private String obtenerEmailAutenticado(Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario no autenticado");
         }
@@ -47,7 +62,7 @@ public class UsuarioController {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario no autenticado");
         }
 
-        return ResponseEntity.ok(usuarioService.obtenerPorEmail(email));
+        return email;
     }
 
     @GetMapping("/{id}")
