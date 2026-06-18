@@ -14,14 +14,27 @@ public record ProyectoUpdateDTO(
     String descripcion,
     String objetivoGeneral,
     @NotNull LocalDate fechaInicio,
-    LocalDate fechaFinEstimada,
+    @NotNull LocalDate fechaFinEstimada,
     EstadoProyecto estado,
     Integer nivelPrioridad,
     Double porcentajeAvance,
-    Double presupuesto,
+    @NotNull Double presupuesto,
+    @NotBlank @Size(min = 3, max = 3) String moneda,
     Long idMacroregion,
     Set<Long> idMacroregiones,
     Long idEjeTematico,
     Long idResponsablePrincipal,
     Set<Long> idTerritorios
-) {}
+) {
+    public ProyectoUpdateDTO(
+        String nombre, String codigoInterno, String descripcion, String objetivoGeneral,
+        LocalDate fechaInicio, LocalDate fechaFinEstimada, EstadoProyecto estado,
+        Integer nivelPrioridad, Double porcentajeAvance, Double presupuesto,
+        Long idMacroregion, Set<Long> idMacroregiones, Long idEjeTematico,
+        Long idResponsablePrincipal, Set<Long> idTerritorios
+    ) {
+        this(nombre, codigoInterno, descripcion, objetivoGeneral, fechaInicio, fechaFinEstimada,
+            estado, nivelPrioridad, porcentajeAvance, presupuesto, "PEN", idMacroregion,
+            idMacroregiones, idEjeTematico, idResponsablePrincipal, idTerritorios);
+    }
+}

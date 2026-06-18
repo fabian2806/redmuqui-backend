@@ -9,9 +9,17 @@ public record ObservacionResponseDTO(
     String descripcion,
     LocalDateTime fecha,
     EstadoObservacion estado,
+    com.redmuqui.platform.trazabilidad.entity.CriticidadIncidencia criticidad,
+    LocalDateTime fechaVencimiento,
+    LocalDateTime fechaResolucion,
+    String comentarioResolucion,
+    Long idUsuarioResolucion,
+    String nombreUsuarioResolucion,
     String entidadReferenciada,
     Long idEntidadReferenciada,
     Long idUsuario,
     String nombreUsuario,
-    String emailUsuario
+    String emailUsuario,
+    Long idResponsable,
+    String nombreResponsable
 ) {}

@@ -10,6 +10,7 @@ import com.redmuqui.platform.proyecto.dto.ProyectoUpdateDTO;
 import com.redmuqui.platform.proyecto.entity.EstadoProyecto;
 import com.redmuqui.platform.proyecto.repository.ProyectoRepository;
 import com.redmuqui.platform.territorio.repository.TerritorioRepository;
+import com.redmuqui.platform.documento.repository.DocumentoRepository;
 import com.redmuqui.platform.trazabilidad.service.BitacoraService;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -40,6 +41,7 @@ class BitacoraAspectTest {
 
     @Mock private BitacoraService bitacoraService;
     @Mock private ProyectoRepository proyectoRepository;
+    @Mock private DocumentoRepository documentoRepository;
     @Mock private MacroregionRepository macroregionRepository;
     @Mock private TerritorioRepository territorioRepository;
 

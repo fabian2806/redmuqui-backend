@@ -4,8 +4,11 @@ import com.redmuqui.platform.actividad.entity.Actividad;
 import com.redmuqui.platform.actividad.entity.EstadoActividad;
 import com.redmuqui.platform.actividad.entity.EstadoHito;
 import com.redmuqui.platform.actividad.entity.Hito;
+import com.redmuqui.platform.actividad.entity.Fase;
+import com.redmuqui.platform.actividad.entity.EstadoFase;
 import com.redmuqui.platform.actividad.repository.ActividadRepository;
 import com.redmuqui.platform.actividad.repository.HitoRepository;
+import com.redmuqui.platform.actividad.repository.FaseRepository;
 import com.redmuqui.platform.actividad.repository.SubactividadRepository;
 import com.redmuqui.platform.proyecto.entity.Proyecto;
 import com.redmuqui.platform.proyecto.repository.ProyectoRepository;
@@ -28,6 +31,7 @@ class AvanceProyectoServiceTest {
 
     @Mock private ActividadRepository actividadRepository;
     @Mock private HitoRepository hitoRepository;
+    @Mock private FaseRepository faseRepository;
     @Mock private SubactividadRepository subactividadRepository;
     @Mock private ProyectoRepository proyectoRepository;
 
@@ -38,6 +42,7 @@ class AvanceProyectoServiceTest {
         service = new AvanceProyectoService(
             actividadRepository,
             hitoRepository,
+            faseRepository,
             subactividadRepository,
             proyectoRepository
         );
@@ -48,7 +53,7 @@ class AvanceProyectoServiceTest {
         Hito hito = Hito.builder().id(10L).build();
         Actividad cortaFinalizada = actividad(1L, "2026-06-01", "2026-06-02", EstadoActividad.FINALIZADA);
         Actividad largaPendiente = actividad(2L, "2026-06-03", "2026-06-08", EstadoActividad.PENDIENTE);
-        when(actividadRepository.findByHitoIdOrderByFechaInicioAscIdAsc(10L))
+        when(actividadRepository.findByHitoIdOrderByFechaInicioPlanificadaAscIdAsc(10L))
             .thenReturn(List.of(cortaFinalizada, largaPendiente));
 
         AvanceProyectoService.ResumenHito resumen = service.resumir(hito);
@@ -60,32 +65,39 @@ class AvanceProyectoServiceTest {
     }
 
     @Test
-    void calculaAvanceDelProyectoPonderandoDuracionDeHitos() {
+    void calculaAvanceDelProyectoPonderandoDuracionDeFases() {
         Proyecto proyecto = Proyecto.builder().id(1L).porcentajeAvance(0D).build();
-        Hito hitoCorto = Hito.builder().id(10L).estado(EstadoHito.PENDIENTE).build();
-        Hito hitoLargo = Hito.builder().id(20L).estado(EstadoHito.PENDIENTE).build();
+        Fase faseCorta = Fase.builder().id(10L)
+            .fechaInicioPlanificada(LocalDate.parse("2026-06-01"))
+            .fechaFinPlanificada(LocalDate.parse("2026-06-02"))
+            .estado(EstadoFase.PENDIENTE).build();
+        Fase faseLarga = Fase.builder().id(20L)
+            .fechaInicioPlanificada(LocalDate.parse("2026-06-03"))
+            .fechaFinPlanificada(LocalDate.parse("2026-06-08"))
+            .estado(EstadoFase.PENDIENTE).build();
         when(proyectoRepository.findById(1L)).thenReturn(Optional.of(proyecto));
-        when(hitoRepository.findByProyectoIdOrderByFechaClaveAscIdAsc(1L)).thenReturn(List.of(hitoCorto, hitoLargo));
-        when(actividadRepository.findByHitoIdOrderByFechaInicioAscIdAsc(10L)).thenReturn(List.of(
+        when(faseRepository.findByProyectoIdOrderByFechaInicioPlanificadaAscIdAsc(1L))
+            .thenReturn(List.of(faseCorta, faseLarga));
+        when(actividadRepository.findByFaseIdOrderByFechaInicioPlanificadaAscIdAsc(10L)).thenReturn(List.of(
             actividad(1L, "2026-06-01", "2026-06-02", EstadoActividad.FINALIZADA)
         ));
-        when(actividadRepository.findByHitoIdOrderByFechaInicioAscIdAsc(20L)).thenReturn(List.of(
+        when(actividadRepository.findByFaseIdOrderByFechaInicioPlanificadaAscIdAsc(20L)).thenReturn(List.of(
             actividad(2L, "2026-06-03", "2026-06-08", EstadoActividad.PENDIENTE)
         ));
 
         service.recalcularProyecto(1L);
 
         assertThat(proyecto.getPorcentajeAvance()).isEqualTo(25D);
-        assertThat(hitoCorto.getEstado()).isEqualTo(EstadoHito.FINALIZADO);
-        assertThat(hitoLargo.getEstado()).isEqualTo(EstadoHito.PENDIENTE);
+        assertThat(faseCorta.getEstado()).isEqualTo(EstadoFase.FINALIZADA);
+        assertThat(faseLarga.getEstado()).isEqualTo(EstadoFase.PENDIENTE);
         verify(proyectoRepository).save(proyecto);
     }
 
     private Actividad actividad(Long id, String inicio, String fin, EstadoActividad estado) {
         return Actividad.builder()
             .id(id)
-            .fechaInicio(LocalDate.parse(inicio))
-            .fechaFin(LocalDate.parse(fin))
+            .fechaInicioPlanificada(LocalDate.parse(inicio))
+            .fechaFinPlanificada(LocalDate.parse(fin))
             .estado(estado)
             .build();
     }

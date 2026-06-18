@@ -39,6 +39,14 @@ public class Archivo extends Auditable {
     @Column(name = "tamanio_bytes", nullable = false)
     private Long tamanioBytes;
 
+    @Column(name = "numero_version", nullable = false)
+    @Builder.Default
+    private Integer numeroVersion = 1;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_usuario_carga", nullable = false)
+    private com.redmuqui.platform.usuario.entity.Usuario usuarioCarga;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_documento", nullable = false)
     private Documento documento;

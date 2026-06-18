@@ -105,7 +105,7 @@ public class ResumenIaService {
         long actPendientes = actividades.stream().filter(a -> a.getEstado() == EstadoActividad.PENDIENTE).count();
         long actVencidas = actividades.stream()
             .filter(a -> a.getEstado() != EstadoActividad.FINALIZADA
-                && a.getFechaFin() != null && a.getFechaFin().isBefore(hoy))
+                && a.getFechaFinReal() != null && a.getFechaFinReal().isBefore(hoy))
             .count();
 
         long hitosFinalizados = hitos.stream().filter(h -> h.getEstado() == EstadoHito.FINALIZADO).count();

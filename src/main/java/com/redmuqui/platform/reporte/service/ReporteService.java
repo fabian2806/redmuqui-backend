@@ -211,20 +211,20 @@ public class ReporteService {
         LocalDate hoy = LocalDate.now();
         if (anio != null) {
             List<Actividad> actividades = actividadRepository.findAll().stream()
-                .filter(a -> enAnio(a.getFechaInicio(), anio) || enAnio(a.getFechaFin(), anio))
+                .filter(a -> enAnio(a.getFechaInicioPlanificada(), anio) || enAnio(a.getFechaFinPlanificada(), anio))
                 .toList();
             return List.of(
                 new ConteoDTO("Finalizadas", actividades.stream().filter(a -> a.getEstado() == EstadoActividad.FINALIZADA).count()),
                 new ConteoDTO("En curso", actividades.stream()
                     .filter(a -> a.getEstado() == EstadoActividad.EN_CURSO)
-                    .filter(a -> a.getFechaFin() == null || !a.getFechaFin().isBefore(hoy))
+                    .filter(a -> a.getFechaFinReal() == null || !a.getFechaFinReal().isBefore(hoy))
                     .count()),
                 new ConteoDTO("Pendientes", actividades.stream()
                     .filter(a -> a.getEstado() == EstadoActividad.PENDIENTE)
-                    .filter(a -> a.getFechaFin() == null || !a.getFechaFin().isBefore(hoy))
+                    .filter(a -> a.getFechaFinReal() == null || !a.getFechaFinReal().isBefore(hoy))
                     .count()),
                 new ConteoDTO("Vencidas", actividades.stream()
-                    .filter(a -> a.getFechaFin() != null && a.getFechaFin().isBefore(hoy))
+                    .filter(a -> a.getFechaFinReal() != null && a.getFechaFinReal().isBefore(hoy))
                     .filter(a -> a.getEstado() != EstadoActividad.FINALIZADA)
                     .count())
             );

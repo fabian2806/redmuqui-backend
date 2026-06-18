@@ -8,6 +8,7 @@ import com.redmuqui.platform.proyecto.dto.ProyectoCreateDTO;
 import com.redmuqui.platform.proyecto.dto.ProyectoResponseDTO;
 import com.redmuqui.platform.proyecto.dto.ProyectoTerritorioRequestDTO;
 import com.redmuqui.platform.proyecto.dto.ProyectoUpdateDTO;
+import com.redmuqui.platform.proyecto.dto.OrganigramaProyectoDTO;
 import com.redmuqui.platform.proyecto.entity.EstadoProyecto;
 import com.redmuqui.platform.proyecto.service.ProyectoService;
 import com.redmuqui.platform.actividad.service.ActividadService;
@@ -87,6 +88,12 @@ public class ProyectoController {
     @Operation(summary = "Listar miembros del equipo del proyecto")
     public ResponseEntity<Set<EquipoMemberDTO>> obtenerEquipo(@PathVariable Long id) {
         return ResponseEntity.ok(service.obtenerEquipo(id));
+    }
+
+    @GetMapping("/{id}/organigrama")
+    @PreAuthorize("hasAuthority('PROYECTOS_READ')")
+    public ResponseEntity<OrganigramaProyectoDTO> obtenerOrganigrama(@PathVariable Long id) {
+        return ResponseEntity.ok(service.obtenerOrganigrama(id));
     }
 
     @GetMapping("/{id}/actividades")

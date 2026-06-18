@@ -10,6 +10,9 @@ public record ArchivoDTO(
         @Size(max = 150) String tipoContenido,
         @Size(max = 500, message = "La descripción no debe superar los 500 caracteres.")
         String descripcion,
-        Long tamanioBytes
+        Long tamanioBytes,
+        Integer numeroVersion,
+        Long idUsuarioCarga,
+        String usuarioCarga
 ) {
 }

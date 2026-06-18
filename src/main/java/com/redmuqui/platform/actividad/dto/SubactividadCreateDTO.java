@@ -15,6 +15,9 @@ public record SubactividadCreateDTO(
     
     @PositiveOrZero(message = "El presupuesto no puede ser negativo")
     Double presupuesto,
+
+    @PositiveOrZero(message = "El costo real no puede ser negativo")
+    Double costoReal,
     
     @PositiveOrZero(message = "Los hombres involucrados no pueden ser negativos")
     Integer hombresInvolucrados,
@@ -22,8 +25,11 @@ public record SubactividadCreateDTO(
     @PositiveOrZero(message = "Las mujeres involucradas no pueden ser negativas")
     Integer mujeresInvolucradas,
     
-    LocalDate fechaInicio,
-    LocalDate fechaFin,
+    LocalDate fechaInicioPlanificada,
+    LocalDate fechaFinPlanificada,
+    LocalDate fechaInicioReal,
+    LocalDate fechaFinReal,
     EstadoSubactividad estado,
-    String descripcion
+    String descripcion,
+    String motivoReprogramacion
 ) {}

@@ -11,6 +11,12 @@ import java.util.List;
 public interface SubactividadRepository extends JpaRepository<Subactividad, Long> {
     List<Subactividad> findByActividadId(Long idActividad);
 
+    @Query("SELECT COALESCE(SUM(s.presupuesto), 0) FROM Subactividad s WHERE s.actividad.proyecto.id = :proyectoId")
+    double sumPresupuestoByProyectoId(Long proyectoId);
+
+    @Query("SELECT COALESCE(SUM(s.costoReal), 0) FROM Subactividad s WHERE s.actividad.proyecto.id = :proyectoId")
+    double sumCostoRealByProyectoId(Long proyectoId);
+
     // ----- Beneficiarios desagregados por género para el dashboard (RF-069) -----
 
     @Query("SELECT COALESCE(SUM(s.hombresInvolucrados), 0) FROM Subactividad s")
