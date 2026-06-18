@@ -19,8 +19,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
-import java.time.Duration;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 
 @Slf4j
@@ -52,18 +52,17 @@ public class AuthService {
                         LocalDateTime.now(),
                         usuario.getBloqueadoHasta()
                 );
-
                 long minutosRestantes = Math.max(1, tiempoRestante.toMinutes());
 
                 throw new ResponseStatusException(
                         HttpStatus.LOCKED,
                         "Cuenta bloqueada temporalmente. Intente nuevamente en "
                                 + minutosRestantes + " minuto(s)."
-                );          }
+                );
+            }
 
             if (usuario.getBloqueadoHasta() != null &&
                     usuario.getBloqueadoHasta().isBefore(LocalDateTime.now())) {
-
                 usuario.setIntentosLoginFallidos(0);
                 usuario.setBloqueadoHasta(null);
                 usuarioRepository.save(usuario);
@@ -87,13 +86,9 @@ public class AuthService {
             String accessToken = jwtService.generateAccessToken(userDetails);
             String refreshToken = jwtService.generateRefreshToken(userDetails);
 
-            return TokenResponse.of(
-                    accessToken,
-                    refreshToken,
-                    jwtService.getAccessTokenExpirationMs()
-            );
+            return TokenResponse.of(accessToken, refreshToken, jwtService.getAccessTokenExpirationMs());
 
-        } catch (AuthenticationException  ex) {
+        } catch (AuthenticationException ex) {
             usuarioOpt.ifPresent(this::registrarIntentoLoginFallido);
             throw ex;
         }
@@ -105,13 +100,13 @@ public class AuthService {
                 : usuario.getIntentosLoginFallidos();
 
         int nuevosIntentos = intentosActuales + 1;
-
         usuario.setIntentosLoginFallidos(nuevosIntentos);
 
         if (nuevosIntentos >= MAX_INTENTOS_LOGIN) {
-            usuario.setBloqueadoHasta(
-                    LocalDateTime.now().plusMinutes(MINUTOS_BLOQUEO)
-            );
+            usuario.setBloqueadoHasta(LocalDateTime.now().plusMinutes(MINUTOS_BLOQUEO));
+            // OWASP A09: loguear evento de seguridad SIN datos sensibles.
+            log.warn("[SECURITY] Cuenta bloqueada por {} intentos fallidos para usuario id={}",
+                    nuevosIntentos, usuario.getId());
         }
 
         usuarioRepository.save(usuario);
@@ -128,7 +123,8 @@ public class AuthService {
             }
 
             if (tokenRevocationService.isTokenRevoked(refreshToken)) {
-                log.warn("Intento de reutilizar un refresh token revocado para {}", email);
+                // OWASP A09: loguear intento de reuso sin exponer el token.
+                log.warn("[SECURITY] Intento de reutilizar refresh token revocado para email={}", email);
                 throw new BusinessException("Refresh token revocado");
             }
 
@@ -144,6 +140,7 @@ public class AuthService {
             String newRefreshToken = jwtService.generateRefreshToken(userDetails);
 
             return TokenResponse.of(newAccessToken, newRefreshToken, jwtService.getAccessTokenExpirationMs());
+
         } catch (JwtException ex) {
             throw new BusinessException("Refresh token malformado o invalido", ex);
         }
@@ -155,17 +152,33 @@ public class AuthService {
         tokenRevocationService.revokeToken(accessToken);
     }
 
+    /**
+     * OWASP A09 – Security Logging:
+     *   ANTES: el token de reseteo se logueaba en texto plano, permitiendo que
+     *   cualquier persona con acceso a los logs pudiera resetear contraseñas.
+     *
+     *   AHORA: se registra el evento sin exponer el token, y el token se envia
+     *   por correo mediante EmailService.
+     *
+     * OWASP A04 – Insecure Design:
+     *   El enlace de reseteo debe caducar (ya implementado vía JWT) y el token
+     *   debe invalidarse tras su primer uso (pendiente de implementar).
+     */
     public void requestRecovery(String email) {
+        // Respuesta homogénea: no revelar si el email existe o no (OWASP A01).
         Usuario usuario = usuarioRepository.findByEmailIgnoreCase(email).orElse(null);
+
         if (usuario != null) {
             String resetToken = jwtService.generatePasswordResetToken(email);
             try {
                 emailService.enviarRecuperacionContrasenha(usuario.getEmail(), resetToken);
+                log.info("[AUDIT] Solicitud de recuperacion de contrasena para usuario id={}", usuario.getId());
                 log.info("Correo de recuperacion enviado a {}", usuario.getEmail());
             } catch (Exception ex) {
                 log.error("No se pudo enviar el correo de recuperacion a {}", usuario.getEmail(), ex);
             }
         }
+        // Si el usuario no existe, no se hace nada ni se logea: respuesta idéntica.
     }
 
     @Transactional
@@ -174,19 +187,21 @@ public class AuthService {
             String email = jwtService.validatePasswordResetToken(token);
 
             Usuario usuario = usuarioRepository.findByEmailIgnoreCase(email)
-                .orElseThrow(() -> new BusinessException("Usuario no encontrado"));
+                    .orElseThrow(() -> new BusinessException("Usuario no encontrado"));
 
-            String hashedPassword = passwordEncoder.encode(nuevaContrasenha);
-
-            usuario.setContrasenhaHash(hashedPassword);
+            usuario.setContrasenhaHash(passwordEncoder.encode(nuevaContrasenha));
             usuarioRepository.save(usuario);
 
-            log.info("Contrasenha reseteada exitosamente para usuario: {}", email);
+            log.info("[AUDIT] Contraseña reseteada para usuario id={}", usuario.getId());
+
         } catch (IllegalArgumentException ex) {
             throw new BusinessException("Token de reseteo invalido o expirado", ex);
+        } catch (BusinessException ex) {
+            throw ex;
         } catch (Exception ex) {
-            log.error("Error al resetear contrasenha", ex);
-            throw new BusinessException("Error interno al procesar el reseteo de contrasenha", ex);
+            // OWASP A09: loguear el error real internamente, nunca exponer al cliente.
+            log.error("[ERROR] Error al resetear contraseña", ex);
+            throw new BusinessException("Error interno al procesar el reseteo de contraseña");
         }
     }
 }

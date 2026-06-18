@@ -17,9 +17,12 @@ import java.util.function.Function;
 /**
  * Servicio para emisión y validación de JSON Web Tokens.
  *
- * Maneja dos tipos de token:
- *   - access token: corta vida, usado en cada request en header Authorization.
- *   - refresh token: vida más larga, usado para emitir nuevos access tokens (RF-003).
+ * OWASP A02 – Cryptographic Failures:
+ *   - getSigningKey() corregido: el secret en application.yml DEBE ser una cadena
+ *     Base64 de al menos 256 bits (32 bytes aleatorios en Base64 = 44 chars).
+ *     Generar con: openssl rand -base64 32
+ *   - Ya no se hace double-encode (Base64.encode → Base64.decode), que antes
+ *     resultaba en usar secret.getBytes() directamente, debilitando la entropía.
  */
 @Service
 public class JwtService {
@@ -98,13 +101,13 @@ public class JwtService {
 
     private String buildToken(Map<String, Object> claims, String subject, long expirationMs) {
         return Jwts.builder()
-            .claims(claims)
-            .subject(subject)
-            .issuer(issuer)
-            .issuedAt(new Date())
-            .expiration(new Date(System.currentTimeMillis() + expirationMs))
-            .signWith(getSigningKey())
-            .compact();
+                .claims(claims)
+                .subject(subject)
+                .issuer(issuer)
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + expirationMs))
+                .signWith(getSigningKey())
+                .compact();
     }
 
     private boolean isTokenExpired(String token) {
@@ -113,17 +116,26 @@ public class JwtService {
 
     private <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
         Claims claims = Jwts.parser()
-            .verifyWith(getSigningKey())
-            .build()
-            .parseSignedClaims(token)
-            .getPayload();
+                .verifyWith(getSigningKey())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
         return claimsResolver.apply(claims);
     }
 
+    /**
+     * OWASP A02 – Fix: el secret en app.yml debe ser Base64 puro (sin doble encode).
+     * Antes: Decoders.BASE64.decode(Base64.getEncoder().encodeToString(secret.getBytes()))
+     *        → equivalía a secret.getBytes(), ignorando la codificación Base64.
+     * Ahora: Decoders.BASE64.decode(secret) → usa los bytes reales del secret Base64,
+     *        aprovechando toda la entropía del valor configurado.
+     *
+     * ACCIÓN REQUERIDA: regenerar el JWT_SECRET con:
+     *   openssl rand -base64 32
+     * y actualizar la variable de entorno JWT_SECRET en el servidor.
+     */
     private SecretKey getSigningKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(
-            java.util.Base64.getEncoder().encodeToString(secret.getBytes())
-        );
+        byte[] keyBytes = Decoders.BASE64.decode(secret);
         return Keys.hmacShaKeyFor(keyBytes);
     }
 }
