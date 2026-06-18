@@ -48,6 +48,7 @@ public class ArchivoService {
     private final AuthenticatedUserService authenticatedUserService;
     private final DocumentoVersionService documentoVersionService;
 
+    @Transactional(readOnly = true)
     public List<ArchivoDTO> listarPorDocumento(Long documentoId) {
         verificarDocumentoExiste(documentoId);
 
