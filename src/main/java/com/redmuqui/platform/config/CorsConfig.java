@@ -12,7 +12,12 @@ import java.util.List;
 
 /**
  * Configuración de CORS.
- * Los orígenes permitidos se configuran en application.yml (app.cors.allowed-origins).
+ *
+ * OWASP A05 – Security Misconfiguration:
+ *   ANTES: setAllowedHeaders(List.of("*")) → aceptaba cualquier header del cliente,
+ *   lo que puede filtrar headers internos o permitir ataques de CORS avanzados.
+ *
+ *   AHORA: se declaran explícitamente solo los headers que el frontend necesita.
  */
 @Configuration
 public class CorsConfig {
@@ -24,11 +29,29 @@ public class CorsConfig {
     public CorsFilter corsFilter() {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         CorsConfiguration config = new CorsConfiguration();
+
         config.setAllowCredentials(true);
         config.setAllowedOrigins(Arrays.asList(allowedOrigins.split(",")));
-        config.setAllowedHeaders(List.of("*"));
-        config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+
+        // OWASP A05: declarar explícitamente los headers permitidos, no usar "*".
+        config.setAllowedHeaders(List.of(
+                "Authorization",
+                "Content-Type",
+                "Accept",
+                "X-Requested-With",
+                "Cache-Control"
+        ));
+
+        config.setAllowedMethods(Arrays.asList(
+                "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"
+        ));
+
+        // Solo exponer el header Authorization al frontend.
         config.setExposedHeaders(List.of("Authorization"));
+
+        // Pre-flight cacheado 30 min para reducir OPTIONS requests.
+        config.setMaxAge(1800L);
+
         source.registerCorsConfiguration("/**", config);
         return new CorsFilter(source);
     }

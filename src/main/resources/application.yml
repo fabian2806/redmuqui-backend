@@ -3,6 +3,10 @@ spring:
     name: redmuqui-platform-backend
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 25MB
 
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:redmuqui_dev}
@@ -41,8 +45,10 @@ spring:
 server:
   port: ${SERVER_PORT:8080}
   error:
-    include-message: always
-    include-binding-errors: always
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
+    include-exception: false
 
 # Configuración de la aplicación
 app:
@@ -66,11 +72,20 @@ app:
     timeout-ms: ${GEMINI_TIMEOUT_MS:30000}
     # Reintentos ante errores transitorios de Gemini (503 "high demand", red). No aplica a 429.
     max-reintentos: ${GEMINI_MAX_REINTENTOS:2}
+  swagger:
+    enabled: ${SWAGGER_ENABLED:false}
 
 aws:
   region: ${AWS_REGION:us-east-1}
   s3:
     bucket: ${S3_BUCKET:redmuqui-files-2026}
+
+# Servicio externo de OCR (Django). Si OCR_WEBHOOK_URL está vacío, la
+# notificación se omite y el polling de respaldo de Django se encarga.
+ocr:
+  webhook:
+    url: ${OCR_WEBHOOK_URL:}
+    token: ${OCR_WEBHOOK_TOKEN:}
 
 # Documentación OpenAPI
 springdoc:
