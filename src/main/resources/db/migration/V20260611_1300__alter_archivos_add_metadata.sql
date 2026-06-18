@@ -1,0 +1,7 @@
+ALTER TABLE archivos
+    ADD COLUMN tipo_contenido VARCHAR(150),
+ADD COLUMN descripcion VARCHAR(500),
+ADD COLUMN tamanio_bytes BIGINT NOT NULL DEFAULT 0;
+
+ALTER TABLE archivos
+ALTER COLUMN url TYPE VARCHAR(1000);

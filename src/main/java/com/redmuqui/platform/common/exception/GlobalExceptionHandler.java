@@ -13,6 +13,10 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+import java.util.Map;
 
 import java.util.List;
 
@@ -63,6 +67,21 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.BAD_REQUEST, "JSON de entrada invÃ¡lido o con valores no permitidos", request);
     }
 
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
+        String mensaje = String.format(
+            "El parametro '%s' tiene un valor no valido: '%s'", ex.getName(), ex.getValue());
+        log.warn("Parametro con tipo o valor invalido: {}", mensaje);
+        return build(HttpStatus.BAD_REQUEST, mensaje, request);
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ErrorResponse> handleMissingParam(MissingServletRequestParameterException ex, HttpServletRequest request) {
+        String mensaje = String.format("Falta el parametro requerido '%s'", ex.getParameterName());
+        log.warn("Parametro requerido ausente: {}", mensaje);
+        return build(HttpStatus.BAD_REQUEST, mensaje, request);
+    }
+
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ErrorResponse> handleBadCredentials(BadCredentialsException ex, HttpServletRequest request) {
         return build(HttpStatus.UNAUTHORIZED, "Credenciales inválidas", request);
@@ -88,6 +107,17 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleGeneric(Exception ex, HttpServletRequest request) {
         log.error("Error interno no controlado", ex);
         return build(HttpStatus.INTERNAL_SERVER_ERROR, "Error interno del servidor", request);
+    }
+
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<Map<String, Object>> handleResponseStatusException(
+            ResponseStatusException ex
+    ) {
+        return ResponseEntity
+                .status(ex.getStatusCode())
+                .body(Map.of(
+                        "message", ex.getReason()
+                ));
     }
 
     private ResponseEntity<ErrorResponse> build(HttpStatus status, String message, HttpServletRequest request) {

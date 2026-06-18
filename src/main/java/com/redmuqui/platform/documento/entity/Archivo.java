@@ -24,11 +24,20 @@ public class Archivo extends Auditable {
     @Column(nullable = false, length = 255)
     private String nombre;
 
-    @Column(nullable = false, length = 500)
+    @Column(nullable = false, length = 1000)
     private String url;
 
     @Column(length = 20)
     private String extension;
+
+    @Column(length = 150)
+    private String tipoContenido;
+
+    @Column(length = 500)
+    private String descripcion;
+
+    @Column(name = "tamanio_bytes", nullable = false)
+    private Long tamanioBytes;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_documento", nullable = false)

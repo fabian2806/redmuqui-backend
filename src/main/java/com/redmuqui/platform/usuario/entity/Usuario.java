@@ -6,6 +6,8 @@ import com.redmuqui.platform.rol.entity.Rol;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(name = "usuarios", indexes = {
     @Index(name = "idx_usuario_email", columnList = "email", unique = true)
@@ -50,4 +52,21 @@ public class Usuario extends Auditable {
 
     @Column(name = "ultimo_acceso")
     private java.time.LocalDateTime ultimoAcceso;
+
+    @Column(name = "intentos_login_fallidos", nullable = false)
+    private Integer intentosLoginFallidos = 0;
+
+    @Column(name = "bloqueado_hasta")
+    private LocalDateTime bloqueadoHasta;
+
+    @PrePersist
+    public void prePersist() {
+        if (this.intentosLoginFallidos == null) {
+            this.intentosLoginFallidos = 0;
+        }
+
+        if (this.estado == null) {
+            this.estado = true;
+        }
+    }
 }

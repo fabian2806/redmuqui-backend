@@ -23,6 +23,10 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
+        # Agrupa la carga de asociaciones LAZY en consultas IN por lotes, en
+        # vez de una query por elemento (N+1). Afecta listados de actividades,
+        # documentos, proyectos y usuarios.
+        default_batch_fetch_size: 25
         jdbc:
           time_zone: America/Lima
     open-in-view: false
@@ -55,6 +59,23 @@ app:
     issuer: redmuqui-platform
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
+  s3:
+    bucket-name: ${S3_BUCKET:redmuqui-files-2026}
+  ia:
+    # Resumen Ejecutivo con IA (Sprint 4 ⑤). La API key NUNCA se versiona: se inyecta
+    # por entorno, igual que JWT_SECRET. Sin GEMINI_API_KEY el endpoint devuelve un
+    # resumen-plantilla (generadoPorIa=false) en vez de fallar.
+    api-key: ${GEMINI_API_KEY:}
+    model: ${GEMINI_MODEL:gemini-2.5-flash}
+    base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com/v1beta}
+    timeout-ms: ${GEMINI_TIMEOUT_MS:30000}
+    # Reintentos ante errores transitorios de Gemini (503 "high demand", red). No aplica a 429.
+    max-reintentos: ${GEMINI_MAX_REINTENTOS:2}
+
+aws:
+  region: ${AWS_REGION:us-east-1}
+  s3:
+    bucket: ${S3_BUCKET:redmuqui-files-2026}
 
 # Documentación OpenAPI
 springdoc:

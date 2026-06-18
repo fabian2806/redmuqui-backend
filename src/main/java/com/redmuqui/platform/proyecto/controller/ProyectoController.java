@@ -44,10 +44,11 @@ public class ProyectoController {
         @RequestParam(required = false) Long idEjeTematico,
         @RequestParam(required = false) Long idInstitucion,
         @RequestParam(required = false) Integer anio,
+        @RequestParam(required = false) Long idTerritorio,
         Pageable pageable
     ) {
         return ResponseEntity.ok(PageResponse.from(
-            service.listar(q, estado, idMacroregion, idEjeTematico, idInstitucion, anio, pageable)
+            service.listar(q, estado, idMacroregion, idEjeTematico, idInstitucion, anio, idTerritorio, pageable)
         ));
     }
 
@@ -59,6 +60,7 @@ public class ProyectoController {
     }
 
     @GetMapping("/ultimo-codigo")
+    @PreAuthorize("hasAuthority('PROYECTOS_CREATE')")
     @Operation(summary = "Obtener el último código de proyecto registrado")
     public ResponseEntity<Map<String, String>> obtenerUltimoCodigo() {
         String ultimoCodigo = service.obtenerUltimoCodigo();

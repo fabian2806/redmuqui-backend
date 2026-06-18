@@ -66,6 +66,9 @@ public class UsuarioService {
                 .orElseThrow(() -> new ResourceNotFoundException("Institucion", dto.idInstitucion())));
         }
 
+        usuario.setIntentosLoginFallidos(0);
+        usuario.setBloqueadoHasta(null);
+
         return mapper.toResponseDTO(usuarioRepository.save(usuario));
     }
 

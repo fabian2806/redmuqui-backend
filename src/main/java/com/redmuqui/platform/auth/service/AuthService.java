@@ -16,6 +16,10 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
+import java.time.Duration;
 
 import java.time.LocalDateTime;
 
@@ -30,23 +34,86 @@ public class AuthService {
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
     private final TokenRevocationService tokenRevocationService;
+    private static final int MAX_INTENTOS_LOGIN = 5;
+    private static final int MINUTOS_BLOQUEO = 10;
 
-    @Transactional
+    @Transactional(noRollbackFor = AuthenticationException.class)
     public TokenResponse login(LoginRequest request) {
-        var auth = authenticationManager.authenticate(
-            new UsernamePasswordAuthenticationToken(request.email(), request.contrasenha())
-        );
-        UserDetails userDetails = (UserDetails) auth.getPrincipal();
+        var usuarioOpt = usuarioRepository.findByEmailIgnoreCase(request.email());
 
-        usuarioRepository.findByEmailIgnoreCase(request.email()).ifPresent(u -> {
-            u.setUltimoAcceso(LocalDateTime.now());
-            usuarioRepository.save(u);
-        });
+        if (usuarioOpt.isPresent()) {
+            Usuario usuario = usuarioOpt.get();
 
-        String accessToken = jwtService.generateAccessToken(userDetails);
-        String refreshToken = jwtService.generateRefreshToken(userDetails);
+            if (usuario.getBloqueadoHasta() != null &&
+                    usuario.getBloqueadoHasta().isAfter(LocalDateTime.now())) {
 
-        return TokenResponse.of(accessToken, refreshToken, jwtService.getAccessTokenExpirationMs());
+                Duration tiempoRestante = Duration.between(
+                        LocalDateTime.now(),
+                        usuario.getBloqueadoHasta()
+                );
+
+                long minutosRestantes = Math.max(1, tiempoRestante.toMinutes());
+
+                throw new ResponseStatusException(
+                        HttpStatus.LOCKED,
+                        "Cuenta bloqueada temporalmente. Intente nuevamente en "
+                                + minutosRestantes + " minuto(s)."
+                );          }
+
+            if (usuario.getBloqueadoHasta() != null &&
+                    usuario.getBloqueadoHasta().isBefore(LocalDateTime.now())) {
+
+                usuario.setIntentosLoginFallidos(0);
+                usuario.setBloqueadoHasta(null);
+                usuarioRepository.save(usuario);
+            }
+        }
+
+        try {
+            var auth = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(request.email(), request.contrasenha())
+            );
+
+            UserDetails userDetails = (UserDetails) auth.getPrincipal();
+
+            usuarioRepository.findByEmailIgnoreCase(request.email()).ifPresent(u -> {
+                u.setUltimoAcceso(LocalDateTime.now());
+                u.setIntentosLoginFallidos(0);
+                u.setBloqueadoHasta(null);
+                usuarioRepository.save(u);
+            });
+
+            String accessToken = jwtService.generateAccessToken(userDetails);
+            String refreshToken = jwtService.generateRefreshToken(userDetails);
+
+            return TokenResponse.of(
+                    accessToken,
+                    refreshToken,
+                    jwtService.getAccessTokenExpirationMs()
+            );
+
+        } catch (AuthenticationException  ex) {
+            usuarioOpt.ifPresent(this::registrarIntentoLoginFallido);
+            throw ex;
+        }
+    }
+
+    private void registrarIntentoLoginFallido(Usuario usuario) {
+        int intentosActuales = usuario.getIntentosLoginFallidos() == null
+                ? 0
+                : usuario.getIntentosLoginFallidos();
+
+        int nuevosIntentos = intentosActuales + 1;
+
+        usuario.setIntentosLoginFallidos(nuevosIntentos);
+
+        if (nuevosIntentos >= MAX_INTENTOS_LOGIN) {
+            usuario.setBloqueadoHasta(
+                    LocalDateTime.now().plusMinutes(MINUTOS_BLOQUEO)
+            );
+        }
+
+        usuarioRepository.save(usuario);
     }
 
     @Transactional

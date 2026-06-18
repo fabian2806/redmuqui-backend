@@ -1,5 +1,6 @@
 package com.redmuqui.platform.actividad.dto;
 
+import com.redmuqui.platform.actividad.entity.EstadoSubactividad;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
@@ -23,5 +24,6 @@ public record SubactividadCreateDTO(
     
     LocalDate fechaInicio,
     LocalDate fechaFin,
+    EstadoSubactividad estado,
     String descripcion
 ) {}

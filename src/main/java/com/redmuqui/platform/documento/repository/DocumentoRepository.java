@@ -12,4 +12,12 @@ public interface DocumentoRepository extends JpaRepository<Documento, Long> {
     Page<Documento> findByProyectoId(Long idProyecto, Pageable pageable);
     Page<Documento> findByEstado(EstadoDocumento estado, Pageable pageable);
     Page<Documento> findByEjeTematicoId(Long idEjeTematico, Pageable pageable);
+
+    // ----- Agregaciones para el dashboard (RF-069, RF-072) -----
+
+    long countByEstado(EstadoDocumento estado);
+
+    long countByEstadoIn(java.util.Collection<EstadoDocumento> estados);
+
+    java.util.List<Documento> findTop5ByOrderByFechaCreacionDescIdDesc();
 }

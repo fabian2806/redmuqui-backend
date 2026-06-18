@@ -4,10 +4,15 @@ import com.redmuqui.platform.actividad.dto.ActividadResponseDTO;
 import com.redmuqui.platform.actividad.dto.HitoResponseDTO;
 import com.redmuqui.platform.actividad.entity.EstadoActividad;
 import com.redmuqui.platform.actividad.entity.EstadoHito;
+import com.redmuqui.platform.macroregion.repository.MacroregionRepository;
 import com.redmuqui.platform.proyecto.dto.ProyectoResponseDTO;
+import com.redmuqui.platform.proyecto.dto.ProyectoUpdateDTO;
 import com.redmuqui.platform.proyecto.entity.EstadoProyecto;
+import com.redmuqui.platform.proyecto.repository.ProyectoRepository;
+import com.redmuqui.platform.territorio.repository.TerritorioRepository;
 import com.redmuqui.platform.trazabilidad.service.BitacoraService;
 import org.aspectj.lang.JoinPoint;
+import org.aspectj.lang.ProceedingJoinPoint;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,6 +39,9 @@ import static org.mockito.Mockito.when;
 class BitacoraAspectTest {
 
     @Mock private BitacoraService bitacoraService;
+    @Mock private ProyectoRepository proyectoRepository;
+    @Mock private MacroregionRepository macroregionRepository;
+    @Mock private TerritorioRepository territorioRepository;
 
     @InjectMocks private BitacoraAspect aspect;
 
@@ -58,18 +66,39 @@ class BitacoraAspectTest {
     }
 
     @Test
-    void trasActualizarProyecto_registraModificacion() {
+    void auditarActualizacionProyecto_registraModificacion() throws Throwable {
         configurarUsuarioAutenticado("admin@test.com");
+        ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
         ProyectoResponseDTO proyecto = proyectoResponse(2L, "PRY-LEGACY");
+        ProyectoUpdateDTO dto = new ProyectoUpdateDTO(
+            "Proyecto actualizado",
+            "PRY-LEGACY",
+            "Descripción",
+            "Objetivo",
+            LocalDate.of(2026, 1, 1),
+            LocalDate.of(2026, 12, 31),
+            EstadoProyecto.ACTIVO,
+            1,
+            10.0,
+            1000.0,
+            null,
+            Set.of(),
+            null,
+            null,
+            Set.of()
+        );
+        when(joinPoint.getArgs()).thenReturn(new Object[] { 2L, dto });
+        when(joinPoint.proceed()).thenReturn(proyecto);
 
-        aspect.trasActualizarProyecto(null, proyecto);
+        Object result = aspect.auditarActualizacionProyecto(joinPoint);
 
         verify(bitacoraService).registrarEventoAutenticado(
             eq(BitacoraAspect.MODIFICACION),
             eq(BitacoraAspect.ENTIDAD_PROYECTO),
             eq(2L),
-            contains("modificó")
+            contains("Nombre")
         );
+        org.assertj.core.api.Assertions.assertThat(result).isSameAs(proyecto);
     }
 
     @Test
@@ -82,6 +111,12 @@ class BitacoraAspectTest {
                 LocalDate.now(),
                 EstadoHito.PENDIENTE,
                 9L,
+                0D,
+                null,
+                null,
+                0L,
+                0,
+                0,
                 java.time.LocalDateTime.now(),
                 java.time.LocalDateTime.now()
         );
@@ -108,6 +143,8 @@ class BitacoraAspectTest {
                 EstadoActividad.EN_CURSO,
                 1,
                 9L,
+                3L,
+                "Hito de capacitación",
                 Set.of(1L),
                 java.util.List.of()
         );
