@@ -23,17 +23,23 @@ spring:
             trust: ${MAIL_SMTP_SSL_TRUST:smtp-relay.brevo.com}
             checkserveridentity: ${MAIL_SMTP_SSL_CHECKSERVERIDENTITY:false}
 
+
+  datasource:
+    url: jdbc:postgresql://ep-lucky-heart-athzbqj9-pooler.c-9.us-east-1.aws.neon.tech:5432/neondb?sslmode=require
+    username: ${DB_USER:neondb_owner}
+    password: ${DB_PASSWORD:npg_FhlYq9o8vxcE}
+    driver-class-name: org.postgresql.Driver
 #  datasource:
 #    url: jdbc:postgresql://${DB_HOST:prueba-redmuqui.crxcfp96qlvj.us-east-1.rds.amazonaws.com}:${DB_PORT:5432}/${DB_NAME:redmuqui_dev}
 #    username: ${DB_USER:postgree}
 #    password: ${DB_PASSWORD:postgree1234}
 #    driver-class-name: org.postgresql.Driver
 
-  datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:redmuqui_dev}
-    username: ${DB_USER:redmuqui}
-    password: ${DB_PASSWORD:redmuqui}
-    driver-class-name: org.postgresql.Driver
+#  datasource:
+#    url: jdbc:postgresql://${DB_HOST:prueba-redmuqui.crxcfp96qlvj.us-east-1.rds.amazonaws.com}:${DB_PORT:5432}/${DB_NAME:redmuqui_dev}
+#    username: ${DB_USER:postgree}
+#    password: ${DB_PASSWORD:postgree1234}
+#    driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
       ddl-auto: validate          # Flyway gestiona el esquema; Hibernate solo valida
