@@ -5,7 +5,9 @@ import com.redmuqui.platform.auth.repository.RefreshTokenRevocadoRepository;
 import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -28,15 +30,21 @@ public class TokenRevocationService {
         return refreshTokenRevocadoRepository.existsByTokenHash(sha256(token));
     }
 
+    @Transactional
     public void revokeToken(String token) {
+        revokeTokenIfNotRevoked(token);
+    }
+
+    @Transactional
+    public boolean revokeTokenIfNotRevoked(String token) {
         if (token == null || token.isBlank()) {
-            return;
+            return false;
         }
 
         try {
             String hash = sha256(token);
             if (refreshTokenRevocadoRepository.existsByTokenHash(hash)) {
-                return;
+                return false;
             }
 
             LocalDateTime expiresAt = jwtService.extractExpiration(token)
@@ -44,15 +52,19 @@ public class TokenRevocationService {
                 .atZone(ZoneId.systemDefault())
                 .toLocalDateTime();
 
-            refreshTokenRevocadoRepository.save(
+            refreshTokenRevocadoRepository.saveAndFlush(
                 RefreshTokenRevocado.builder()
                     .tokenHash(hash)
                     .revokedAt(LocalDateTime.now())
                     .expiresAt(expiresAt)
                     .build()
             );
+            return true;
+        } catch (DataIntegrityViolationException ex) {
+            return false;
         } catch (JwtException ex) {
             log.warn("No se registro revocacion: token invalido o expirado.");
+            return false;
         }
     }
 

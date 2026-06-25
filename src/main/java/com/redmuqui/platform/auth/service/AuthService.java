@@ -22,6 +22,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Slf4j
 @Service
@@ -129,9 +130,16 @@ public class AuthService {
             }
 
             UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+            Usuario usuario = usuarioRepository.findByEmailIgnoreCase(email)
+                    .orElseThrow(() -> new BusinessException("Usuario no encontrado"));
 
             if (!jwtService.isTokenValid(refreshToken, userDetails)) {
                 throw new BusinessException("Refresh token invalido o expirado");
+            }
+
+            if (tokenEmitidoAntesDelCambioContrasenha(refreshToken, usuario)) {
+                tokenRevocationService.revokeToken(refreshToken);
+                throw new BusinessException("Refresh token revocado por cambio de contrasena");
             }
 
             tokenRevocationService.revokeToken(refreshToken);
@@ -186,10 +194,19 @@ public class AuthService {
         try {
             String email = jwtService.validatePasswordResetToken(token);
 
+            if (tokenRevocationService.isTokenRevoked(token)) {
+                throw new BusinessException("Token de reseteo invalido o expirado");
+            }
+
             Usuario usuario = usuarioRepository.findByEmailIgnoreCase(email)
                     .orElseThrow(() -> new BusinessException("Usuario no encontrado"));
 
+            if (!tokenRevocationService.revokeTokenIfNotRevoked(token)) {
+                throw new BusinessException("Token de reseteo invalido o expirado");
+            }
+
             usuario.setContrasenhaHash(passwordEncoder.encode(nuevaContrasenha));
+            usuario.setContrasenhaActualizadaEn(LocalDateTime.now());
             usuarioRepository.save(usuario);
 
             log.info("[AUDIT] Contraseña reseteada para usuario id={}", usuario.getId());
@@ -203,5 +220,19 @@ public class AuthService {
             log.error("[ERROR] Error al resetear contraseña", ex);
             throw new BusinessException("Error interno al procesar el reseteo de contraseña");
         }
+    }
+
+    private boolean tokenEmitidoAntesDelCambioContrasenha(String token, Usuario usuario) {
+        LocalDateTime contrasenhaActualizadaEn = usuario.getContrasenhaActualizadaEn();
+        if (contrasenhaActualizadaEn == null) {
+            return false;
+        }
+
+        LocalDateTime emitidoEn = jwtService.extractIssuedAt(token)
+                .toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDateTime();
+
+        return emitidoEn.isBefore(contrasenhaActualizadaEn);
     }
 }

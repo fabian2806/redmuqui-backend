@@ -63,8 +63,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErrorResponse> handleUnreadableMessage(HttpMessageNotReadableException ex, HttpServletRequest request) {
-        log.warn("JSON de entrada invÃ¡lido: {}", ex.getMostSpecificCause().getMessage());
-        return build(HttpStatus.BAD_REQUEST, "JSON de entrada invÃ¡lido o con valores no permitidos", request);
+        log.warn("JSON de entrada invalido: {}", ex.getMostSpecificCause().getMessage());
+        return build(HttpStatus.BAD_REQUEST, "JSON de entrada invalido o con valores no permitidos", request);
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)

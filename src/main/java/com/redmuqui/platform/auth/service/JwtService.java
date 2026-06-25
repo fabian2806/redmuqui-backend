@@ -4,6 +4,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
@@ -27,6 +28,9 @@ import java.util.function.Function;
 @Service
 public class JwtService {
 
+    private static final String EXAMPLE_SECRET = "dGhpcy1uby1lcy11bi1zZWNyZXRvLWVqZW1wbG8tMTIzNDU2Nzg5MA==";
+    private static final int MIN_SECRET_BYTES = 32;
+
     @Value("${app.jwt.secret}")
     private String secret;
 
@@ -41,6 +45,27 @@ public class JwtService {
 
     @Value("${app.jwt.issuer}")
     private String issuer;
+
+    @PostConstruct
+    void validateSecret() {
+        if (secret == null || secret.isBlank()) {
+            throw new IllegalStateException("JWT_SECRET es obligatorio.");
+        }
+        if (EXAMPLE_SECRET.equals(secret)) {
+            throw new IllegalStateException("JWT_SECRET no puede usar el secreto de ejemplo versionado.");
+        }
+
+        byte[] keyBytes;
+        try {
+            keyBytes = Decoders.BASE64.decode(secret);
+        } catch (RuntimeException ex) {
+            throw new IllegalStateException("JWT_SECRET debe ser Base64 valido. Generar con: openssl rand -base64 32", ex);
+        }
+
+        if (keyBytes.length < MIN_SECRET_BYTES) {
+            throw new IllegalStateException("JWT_SECRET debe tener al menos 32 bytes decodificados.");
+        }
+    }
 
     public String generateAccessToken(UserDetails userDetails) {
         Map<String, Object> claims = new HashMap<>();
@@ -97,6 +122,10 @@ public class JwtService {
 
     public Date extractExpiration(String token) {
         return extractClaim(token, Claims::getExpiration);
+    }
+
+    public Date extractIssuedAt(String token) {
+        return extractClaim(token, Claims::getIssuedAt);
     }
 
     private String buildToken(Map<String, Object> claims, String subject, long expirationMs) {
