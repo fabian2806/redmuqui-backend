@@ -14,6 +14,9 @@ public interface SubactividadRepository extends JpaRepository<Subactividad, Long
     @Query("SELECT COALESCE(SUM(s.presupuesto), 0) FROM Subactividad s WHERE s.actividad.proyecto.id = :proyectoId")
     double sumPresupuestoByProyectoId(Long proyectoId);
 
+    @Query("SELECT COALESCE(SUM(s.presupuesto), 0) FROM Subactividad s WHERE s.actividad.id = :actividadId")
+    double sumPresupuestoByActividadId(Long actividadId);
+
     @Query("SELECT COALESCE(SUM(s.costoReal), 0) FROM Subactividad s WHERE s.actividad.proyecto.id = :proyectoId")
     double sumCostoRealByProyectoId(Long proyectoId);
 

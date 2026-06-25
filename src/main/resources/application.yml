@@ -73,7 +73,7 @@ server:
 # Configuración de la aplicación
 app:
   jwt:
-    secret: ${JWT_SECRET:dGhpcy1uby1lcy11bi1zZWNyZXRvLWVqZW1wbG8tMTIzNDU2Nzg5MA==}
+    secret: ${JWT_SECRET:UmVkTXVxdWlQbGF0YWZvcm1hU2VjcmV0S2V5SldUMjAyNiE=}
     access-token-expiration-ms: 900000        # 15 minutos
     refresh-token-expiration-ms: 604800000    # 7 días
     reset-token-expiration-ms: 900000         # 15 minutos

@@ -16,6 +16,8 @@ public record ActividadResponseDTO(
     EstadoActividad estado,
     Integer porcentajeAvance,
     Double avancePlanificado,
+    Double presupuesto,
+    Double presupuestoDisponible,
     Double costoEstimado,
     Double costoReal,
     String moneda,
@@ -38,7 +40,7 @@ public record ActividadResponseDTO(
         String nombreHito, Set<Long> idResponsables, List<SubactividadResponseDTO> subactividades
     ) {
         this(id, nombre, descripcion, fechaInicioPlanificada, fechaFinPlanificada, estado, porcentajeAvance,
-            0D, 0D, 0D, "PEN", null, null, null, EstadoCronograma.PENDIENTE,
+            0D, 0D, 0D, 0D, 0D, "PEN", null, null, null, EstadoCronograma.PENDIENTE,
             List.of(), idProyecto, null, null, idHito, nombreHito, idResponsables, subactividades);
     }
 }

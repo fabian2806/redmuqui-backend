@@ -64,6 +64,10 @@ public class Actividad extends Auditable {
     @Builder.Default
     private Integer porcentajeAvance = 0;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private Double presupuesto = 0.0;
+
     @OneToMany(mappedBy = "actividad", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<Subactividad> subactividades = new ArrayList<>();

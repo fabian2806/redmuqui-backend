@@ -27,4 +27,7 @@ public class SubactividadCofinanciamiento {
 
     @Column(nullable = false)
     private Double monto;
+
+    @Column(nullable = false, columnDefinition = "TEXT")
+    private String justificacion;
 }

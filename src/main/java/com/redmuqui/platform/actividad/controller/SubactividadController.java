@@ -46,11 +46,20 @@ public class SubactividadController {
     }
 
     @PostMapping("/{subactividadId}/cofinanciamientos")
-    @PreAuthorize("hasAuthority('PROYECTOS_UPDATE')")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     public ResponseEntity<SubactividadResponseDTO> cofinanciar(
             @PathVariable Long subactividadId,
             @Valid @RequestBody SubactividadCofinanciamientoCreateDTO dto) {
         return ResponseEntity.ok(subactividadService.cofinanciar(subactividadId, dto));
+    }
+
+    @DeleteMapping("/{subactividadId}/cofinanciamientos/{actividadOrigenId}")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    public ResponseEntity<Void> eliminarCofinanciamiento(
+            @PathVariable Long subactividadId,
+            @PathVariable Long actividadOrigenId) {
+        subactividadService.eliminarCofinanciamiento(subactividadId, actividadOrigenId);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{subactividadId}/evidencias")

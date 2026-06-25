@@ -158,12 +158,14 @@ public class ProyectoService {
         validarPorcentajeAvance(dto.porcentajeAvance());
         String nuevaMoneda = dto.moneda().toUpperCase(java.util.Locale.ROOT);
         if (!proyecto.getMoneda().equalsIgnoreCase(nuevaMoneda)
-            && (subactividadRepository.sumPresupuestoByProyectoId(id) > 0
+            && (actividadRepository.sumPresupuestoByProyectoId(id) > 0
+                || subactividadRepository.sumPresupuestoByProyectoId(id) > 0
                 || subactividadRepository.sumCostoRealByProyectoId(id) > 0)) {
             throw new BusinessException(
                 "No se puede cambiar la moneda de un proyecto que ya tiene costos registrados"
             );
         }
+        validarPresupuestoProyectoNoMenorAActividades(id, dto.presupuesto());
 
         proyecto.setNombre(dto.nombre());
         proyecto.setCodigoInterno(dto.codigoInterno());
@@ -369,6 +371,17 @@ public class ProyectoService {
     private void validarPorcentajeAvance(Double porcentajeAvance) {
         if (porcentajeAvance != null && (porcentajeAvance < 0 || porcentajeAvance > 100)) {
             throw new BusinessException("El porcentaje de avance debe estar entre 0 y 100");
+        }
+    }
+
+    private void validarPresupuestoProyectoNoMenorAActividades(Long proyectoId, Double presupuesto) {
+        double presupuestoProyecto = presupuesto == null ? 0D : presupuesto;
+        double presupuestoActividades = actividadRepository.sumPresupuestoByProyectoId(proyectoId);
+        if (presupuestoProyecto < presupuestoActividades) {
+            throw new BusinessException(
+                "El presupuesto del proyecto no puede ser menor al presupuesto asignado a sus actividades. Asignado: "
+                    + presupuestoActividades
+            );
         }
     }
 

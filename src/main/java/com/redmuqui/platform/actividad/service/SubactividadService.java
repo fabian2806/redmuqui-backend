@@ -37,6 +37,7 @@ public class SubactividadService {
     private final SubactividadCofinanciamientoRepository cofinanciamientoRepository;
     private final SubactividadArchivoRepository archivoRepository;
     private final AvanceProyectoService avanceProyectoService;
+    private final CofinanciamientoService cofinanciamientoService;
     private final AuthenticatedUserService authenticatedUserService;
     private final CronogramaService cronogramaService;
     private final ValidacionCronogramaService validacionCronogramaService;
@@ -61,12 +62,14 @@ public class SubactividadService {
         validacionCronogramaService.validarFechaReal(
             fechaFinReal, fechaInicioReal, dto.fechaInicioPlanificada(), "la subactividad"
         );
+        double presupuestoSolicitado = normalizarPresupuestoSubactividad(dto.presupuesto());
+        validarPresupuestoDentroDeActividad(actividad, presupuestoSolicitado, 0D);
             
         Subactividad subactividad = Subactividad.builder()
             .nombre(dto.nombre())
             .responsable(usuarioRepository.findById(dto.idResponsable())
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario", dto.idResponsable())))
-            .presupuesto(dto.presupuesto() != null ? dto.presupuesto() : 0.0)
+            .presupuesto(presupuestoSolicitado)
             .costoReal(dto.costoReal())
             .porcentajeAvance(0)
             .hombresInvolucrados(dto.hombresInvolucrados() != null ? dto.hombresInvolucrados() : 0)
@@ -108,7 +111,9 @@ public class SubactividadService {
             s.setResponsable(usuarioRepository.findById(dto.idResponsable())
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario", dto.idResponsable())));
         }
-        s.setPresupuesto(dto.presupuesto() != null ? dto.presupuesto() : 0.0);
+        double presupuestoSolicitado = normalizarPresupuestoSubactividad(dto.presupuesto());
+        validarPresupuestoDentroDeActividad(s.getActividad(), presupuestoSolicitado, s.getPresupuesto());
+        s.setPresupuesto(presupuestoSolicitado);
         s.setCostoReal(dto.costoReal());
         s.setHombresInvolucrados(dto.hombresInvolucrados() != null ? dto.hombresInvolucrados() : 0);
         s.setMujeresInvolucradas(dto.mujeresInvolucradas() != null ? dto.mujeresInvolucradas() : 0);
@@ -166,24 +171,45 @@ public class SubactividadService {
 
     @Transactional
     public SubactividadResponseDTO cofinanciar(Long subactividadId, SubactividadCofinanciamientoCreateDTO dto) {
+        if (dto.monto() == null || dto.monto() <= 0) {
+            throw new BusinessException("El monto debe ser positivo");
+        }
+
         Subactividad subactividad = subactividadRepository.findById(subactividadId)
             .orElseThrow(() -> new ResourceNotFoundException("Subactividad", subactividadId));
             
         Actividad actividadOrigen = actividadRepository.findById(dto.actividadId())
             .orElseThrow(() -> new ResourceNotFoundException("Actividad", dto.actividadId()));
-        String monedaDestino = subactividad.getActividad().getProyecto().getMoneda();
-        String monedaOrigen = actividadOrigen.getProyecto().getMoneda();
+        Proyecto proyectoDestino = subactividad.getActividad().getProyecto();
+        Proyecto proyectoOrigen = actividadOrigen.getProyecto();
+        if (java.util.Objects.equals(proyectoDestino.getId(), proyectoOrigen.getId())) {
+            throw new BusinessException("Solo se permite cofinanciar entre proyectos distintos");
+        }
+
+        String monedaDestino = proyectoDestino.getMoneda();
+        String monedaOrigen = proyectoOrigen.getMoneda();
         if (!java.util.Objects.equals(monedaDestino, monedaOrigen)) {
             throw new BusinessException(
                 "No se puede cofinanciar entre proyectos con monedas diferentes ("
                     + monedaOrigen + " y " + monedaDestino + ")"
             );
         }
+
+        double disponible = cofinanciamientoService.calcularPresupuestoDisponible(actividadOrigen);
+        if (dto.monto() > disponible) {
+            throw new BusinessException(
+                "El monto solicitado excede el presupuesto disponible de la actividad origen. Disponible: "
+                    + disponible
+            );
+        }
+
+        String justificacion = normalizarJustificacion(dto.justificacion());
             
         SubactividadCofinanciamiento cofinanciamiento = SubactividadCofinanciamiento.builder()
             .subactividad(subactividad)
             .actividadOrigen(actividadOrigen)
             .monto(dto.monto())
+            .justificacion(justificacion)
             .build();
             
         // Check if cofinanciamiento already exists for this pair
@@ -191,6 +217,7 @@ public class SubactividadService {
         if (cofinanciamientoRepository.existsById(id)) {
             SubactividadCofinanciamiento existing = cofinanciamientoRepository.findById(id).get();
             existing.setMonto(existing.getMonto() + dto.monto());
+            existing.setJustificacion(combinarJustificaciones(existing.getJustificacion(), justificacion));
             cofinanciamientoRepository.save(existing);
         } else {
             cofinanciamiento.setId(id);
@@ -199,6 +226,16 @@ public class SubactividadService {
         }
         
         return toDTO(subactividadRepository.save(subactividad));
+    }
+
+    @Transactional
+    public void eliminarCofinanciamiento(Long subactividadId, Long actividadOrigenId) {
+        SubactividadCofinanciamientoId id =
+            new SubactividadCofinanciamientoId(subactividadId, actividadOrigenId);
+        SubactividadCofinanciamiento cofinanciamiento = cofinanciamientoRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Cofinanciamiento", id));
+        cofinanciamientoRepository.delete(cofinanciamiento);
+        cofinanciamientoRepository.flush();
     }
     
     @Transactional
@@ -309,7 +346,7 @@ public class SubactividadService {
                     (a.getUsuarioCarga().getNombres() + " " + a.getUsuarioCarga().getApellidos()).trim()))
                 .collect(Collectors.toList()),
             s.getCofinanciamientos().stream()
-                .map(c -> new SubactividadCofinanciamientoResponseDTO(c.getActividadOrigen().getId(), c.getMonto()))
+                .map(this::mapCofinanciamiento)
                 .collect(Collectors.toList()),
             cronogramaService.listar(TipoEntidadCronograma.SUBACTIVIDAD, s.getId()),
             s.getActividad().getId(),
@@ -334,6 +371,30 @@ public class SubactividadService {
         }
     }
 
+    private double normalizarPresupuestoSubactividad(Double presupuesto) {
+        double presupuestoSeguro = presupuesto == null ? 0D : presupuesto;
+        if (presupuestoSeguro < 0) {
+            throw new BusinessException("El presupuesto de la subactividad no puede ser negativo");
+        }
+        return presupuestoSeguro;
+    }
+
+    private void validarPresupuestoDentroDeActividad(
+            Actividad actividad,
+            double presupuestoSolicitado,
+            Double presupuestoActualSubactividad) {
+        double disponible = cofinanciamientoService.calcularPresupuestoDisponibleParaSubactividad(
+            actividad,
+            presupuestoActualSubactividad
+        );
+        if (presupuestoSolicitado > disponible) {
+            throw new BusinessException(
+                "El presupuesto de la subactividad excede el presupuesto disponible de la actividad. Disponible: "
+                    + disponible
+            );
+        }
+    }
+
     private int calcularAvanceEvidencias(Subactividad subactividad) {
         if (subactividad.getArchivosEvidencia().isEmpty()) return 0;
         long aceptadas = subactividad.getArchivosEvidencia().stream()
@@ -344,6 +405,33 @@ public class SubactividadService {
         if (aceptadas > 0) return 75;
         if (revision > 0) return 50;
         return 25;
+    }
+
+    private SubactividadCofinanciamientoResponseDTO mapCofinanciamiento(SubactividadCofinanciamiento c) {
+        Actividad actividadOrigen = c.getActividadOrigen();
+        Proyecto proyectoOrigen = actividadOrigen.getProyecto();
+        return new SubactividadCofinanciamientoResponseDTO(
+            actividadOrigen.getId(),
+            actividadOrigen.getNombre(),
+            proyectoOrigen.getId(),
+            proyectoOrigen.getNombre(),
+            c.getMonto(),
+            c.getJustificacion()
+        );
+    }
+
+    private String normalizarJustificacion(String justificacion) {
+        if (justificacion == null || justificacion.isBlank()) {
+            throw new BusinessException("La justificacion es obligatoria");
+        }
+        return justificacion.trim();
+    }
+
+    private String combinarJustificaciones(String justificacionActual, String nuevaJustificacion) {
+        if (justificacionActual == null || justificacionActual.isBlank()) {
+            return nuevaJustificacion;
+        }
+        return justificacionActual + "\n---\n" + nuevaJustificacion;
     }
 
     private double calcularAvancePlanificado(LocalDate inicio, LocalDate fin) {

@@ -278,7 +278,7 @@ class DocumentoServiceTest {
         assertThatThrownBy(() -> service.eliminar(404L))
             .isInstanceOf(ResourceNotFoundException.class)
             .hasMessageContaining("Documento");
-        verify(documentoRepository, never()).delete(any());
+        verify(documentoRepository, never()).delete(any(Documento.class));
     }
 
     @Test

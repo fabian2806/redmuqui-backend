@@ -4,6 +4,7 @@ import com.redmuqui.platform.proyecto.dto.ProyectoResponseDTO;
 import com.redmuqui.platform.proyecto.dto.ProyectoSummaryDTO;
 import com.redmuqui.platform.proyecto.entity.Proyecto;
 import com.redmuqui.platform.usuario.dto.UsuarioSummaryDTO;
+import com.redmuqui.platform.actividad.repository.ActividadRepository;
 import com.redmuqui.platform.actividad.repository.SubactividadRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -18,6 +19,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ProyectoMapper {
 
+    private final ActividadRepository actividadRepository;
     private final SubactividadRepository subactividadRepository;
 
     public ProyectoResponseDTO toResponseDTO(Proyecto p) {
@@ -27,11 +29,11 @@ public class ProyectoMapper {
             .collect(Collectors.toCollection(LinkedHashSet::new));
         var macroregionPrincipal = macroregiones.stream().findFirst().orElse(null);
 
-        double costoEstimado = subactividadRepository.sumPresupuestoByProyectoId(p.getId());
+        double costoEstimado = actividadRepository.sumPresupuestoByProyectoId(p.getId());
         double costoReal = subactividadRepository.sumCostoRealByProyectoId(p.getId());
-        double porcentajeEjecutado = p.getPresupuesto() == null || p.getPresupuesto() <= 0
+        double porcentajeComprometido = p.getPresupuesto() == null || p.getPresupuesto() <= 0
             ? 0D
-            : costoReal * 100D / p.getPresupuesto();
+            : costoEstimado * 100D / p.getPresupuesto();
 
         return new ProyectoResponseDTO(
             p.getId(),
@@ -49,8 +51,8 @@ public class ProyectoMapper {
             p.getMoneda(),
             costoEstimado,
             costoReal,
-            porcentajeEjecutado,
-            resolverAlertaPresupuesto(porcentajeEjecutado),
+            porcentajeComprometido,
+            resolverAlertaPresupuesto(porcentajeComprometido),
             macroregionPrincipal != null ? macroregionPrincipal.nombre() : null,
             macroregionPrincipal != null ? macroregionPrincipal.id() : null,
             macroregiones,

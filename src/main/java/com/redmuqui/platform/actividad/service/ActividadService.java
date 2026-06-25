@@ -46,6 +46,7 @@ public class ActividadService {
     private final FaseRepository faseRepository;
     private final AvanceProyectoService avanceProyectoService;
     private final HitoService hitoService;
+    private final CofinanciamientoService cofinanciamientoService;
     private final CronogramaService cronogramaService;
     private final ValidacionCronogramaService validacionCronogramaService;
     private final DocumentoRepository documentoRepository;
@@ -83,6 +84,8 @@ public class ActividadService {
             dto.fechaFinReal(), dto.fechaInicioReal(), "la actividad"
         );
         Hito hito = buscarHitoOpcional(dto.idHito(), fase.getId());
+        double presupuestoActividad = dto.presupuesto() != null ? dto.presupuesto() : 0.0;
+        validarPresupuestoDentroDelProyecto(proyecto, presupuestoActividad, null);
         Actividad actividad = Actividad.builder()
             .nombre(dto.nombre())
             .descripcion(dto.descripcion())
@@ -92,6 +95,7 @@ public class ActividadService {
             .fechaFinReal(dto.fechaFinReal())
             .estado(dto.estado() != null ? dto.estado() : EstadoActividad.PENDIENTE)
             .porcentajeAvance(dto.estado() == EstadoActividad.FINALIZADA ? 100 : 0)
+            .presupuesto(presupuestoActividad)
             .proyecto(proyecto)
             .fase(fase)
             .hito(hito)
@@ -143,6 +147,10 @@ public class ActividadService {
         a.setFechaFinPlanificada(dto.fechaFinPlanificada());
         a.setFechaInicioReal(dto.fechaInicioReal());
         a.setFechaFinReal(dto.fechaFinReal());
+        double presupuestoActualizado = dto.presupuesto() != null ? dto.presupuesto() : 0.0;
+        validarPresupuestoNoMenorAlComprometido(a, presupuestoActualizado);
+        validarPresupuestoDentroDelProyecto(proyecto, presupuestoActualizado, a.getId());
+        a.setPresupuesto(presupuestoActualizado);
         if (dto.estado() != null) {
             a.setEstado(dto.estado());
             a.setPorcentajeAvance(dto.estado() == EstadoActividad.FINALIZADA ? 100 : 0);
@@ -247,12 +255,37 @@ public class ActividadService {
             .orElseThrow(() -> new ResourceNotFoundException("Actividad", id));
     }
 
+    private void validarPresupuestoNoMenorAlComprometido(Actividad actividad, double presupuesto) {
+        double comprometido = cofinanciamientoService.calcularPresupuestoComprometido(actividad);
+        if (presupuesto < comprometido) {
+            throw new BusinessException(
+                "El presupuesto de la actividad no puede ser menor al monto comprometido. Comprometido: "
+                    + comprometido
+            );
+        }
+    }
+
+    private void validarPresupuestoDentroDelProyecto(
+            Proyecto proyecto,
+            double presupuestoActividad,
+            Long actividadIdActual) {
+        double presupuestoProyecto = proyecto.getPresupuesto() == null ? 0D : proyecto.getPresupuesto();
+        double presupuestoOtrasActividades = actividadIdActual == null
+            ? actividadRepository.sumPresupuestoByProyectoId(proyecto.getId())
+            : actividadRepository.sumPresupuestoByProyectoIdExcludingActividad(proyecto.getId(), actividadIdActual);
+        double totalAsignado = presupuestoOtrasActividades + presupuestoActividad;
+        if (totalAsignado > presupuestoProyecto) {
+            throw new BusinessException(
+                "El presupuesto asignado a actividades excede el presupuesto del proyecto. Disponible: "
+                    + (presupuestoProyecto - presupuestoOtrasActividades)
+            );
+        }
+    }
+
     private ActividadResponseDTO toDTO(Actividad a) {
-        double costoEstimado = a.getSubactividades() == null ? 0D : a.getSubactividades().stream()
-            .map(Subactividad::getPresupuesto)
-            .filter(java.util.Objects::nonNull)
-            .mapToDouble(Double::doubleValue)
-            .sum();
+        double presupuesto = a.getPresupuesto() == null ? 0D : a.getPresupuesto();
+        double presupuestoDisponible = cofinanciamientoService.calcularPresupuestoDisponible(a);
+        double costoEstimado = presupuesto;
         double costoReal = a.getSubactividades() == null ? 0D : a.getSubactividades().stream()
             .map(Subactividad::getCostoReal)
             .filter(java.util.Objects::nonNull)
@@ -268,6 +301,8 @@ public class ActividadService {
             a.getFechaInicioPlanificada(), a.getFechaFinPlanificada(), a.getEstado(),
             a.getPorcentajeAvance(),
             calcularAvancePlanificado(a.getFechaInicioPlanificada(), a.getFechaFinPlanificada()),
+            presupuesto,
+            presupuestoDisponible,
             costoEstimado,
             costoReal,
             a.getProyecto().getMoneda(),
@@ -334,7 +369,14 @@ public class ActividadService {
                     (a.getUsuarioCarga().getNombres() + " " + a.getUsuarioCarga().getApellidos()).trim()))
                 .collect(Collectors.toList()),
             s.getCofinanciamientos() == null ? List.of() : s.getCofinanciamientos().stream()
-                .map(c -> new SubactividadCofinanciamientoResponseDTO(c.getActividadOrigen().getId(), c.getMonto()))
+                .map(c -> new SubactividadCofinanciamientoResponseDTO(
+                    c.getActividadOrigen().getId(),
+                    c.getActividadOrigen().getNombre(),
+                    c.getActividadOrigen().getProyecto().getId(),
+                    c.getActividadOrigen().getProyecto().getNombre(),
+                    c.getMonto(),
+                    c.getJustificacion()
+                ))
                 .collect(Collectors.toList()),
             cronogramaService.listar(TipoEntidadCronograma.SUBACTIVIDAD, s.getId()),
             s.getActividad().getId(),
