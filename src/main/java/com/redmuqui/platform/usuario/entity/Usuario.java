@@ -59,6 +59,9 @@ public class Usuario extends Auditable {
     @Column(name = "bloqueado_hasta")
     private LocalDateTime bloqueadoHasta;
 
+    @Column(name = "contrasenha_actualizada_en")
+    private LocalDateTime contrasenhaActualizadaEn;
+
     @PrePersist
     public void prePersist() {
         if (this.intentosLoginFallidos == null) {

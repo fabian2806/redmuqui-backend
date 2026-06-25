@@ -2,6 +2,7 @@ package com.redmuqui.platform.auth.filter;
 
 import com.redmuqui.platform.auth.service.JwtService;
 import com.redmuqui.platform.auth.service.TokenRevocationService;
+import com.redmuqui.platform.usuario.repository.UsuarioRepository;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -21,6 +22,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 /**
  * Filtro que extrae el JWT del header Authorization y autentica al usuario.
@@ -41,6 +44,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
     private final TokenRevocationService tokenRevocationService;
+    private final UsuarioRepository usuarioRepository;
 
     @Override
     protected void doFilterInternal(
@@ -70,7 +74,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 if (jwtService.isAccessToken(jwt)
                         && !tokenRevocationService.isTokenRevoked(jwt)
-                        && jwtService.isTokenValid(jwt, userDetails)) {
+                        && jwtService.isTokenValid(jwt, userDetails)
+                        && !tokenEmitidoAntesDelCambioContrasenha(jwt, userEmail)) {
 
                     UsernamePasswordAuthenticationToken authToken =
                             new UsernamePasswordAuthenticationToken(
@@ -91,5 +96,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private boolean tokenEmitidoAntesDelCambioContrasenha(String token, String email) {
+        return usuarioRepository.findByEmailIgnoreCase(email)
+                .map(usuario -> {
+                    LocalDateTime contrasenhaActualizadaEn = usuario.getContrasenhaActualizadaEn();
+                    if (contrasenhaActualizadaEn == null) {
+                        return false;
+                    }
+
+                    LocalDateTime emitidoEn = jwtService.extractIssuedAt(token)
+                            .toInstant()
+                            .atZone(ZoneId.systemDefault())
+                            .toLocalDateTime();
+
+                    return emitidoEn.isBefore(contrasenhaActualizadaEn);
+                })
+                .orElse(true);
     }
 }
