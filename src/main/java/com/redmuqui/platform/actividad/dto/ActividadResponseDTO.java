@@ -32,7 +32,8 @@ public record ActividadResponseDTO(
     Long idHito,
     String nombreHito,
     Set<Long> idResponsables,
-    List<SubactividadResponseDTO> subactividades
+    List<SubactividadResponseDTO> subactividades,
+    List<CofinanciamientoSalienteDTO> cofinanciamientosSalientes
 ) {
     public ActividadResponseDTO(
         Long id, String nombre, String descripcion, LocalDate fechaInicioPlanificada, LocalDate fechaFinPlanificada,
@@ -41,6 +42,6 @@ public record ActividadResponseDTO(
     ) {
         this(id, nombre, descripcion, fechaInicioPlanificada, fechaFinPlanificada, estado, porcentajeAvance,
             0D, 0D, 0D, 0D, 0D, "PEN", null, null, null, EstadoCronograma.PENDIENTE,
-            List.of(), idProyecto, null, null, idHito, nombreHito, idResponsables, subactividades);
+            List.of(), idProyecto, null, null, idHito, nombreHito, idResponsables, subactividades, List.of());
     }
 }

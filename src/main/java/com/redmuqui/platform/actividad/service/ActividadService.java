@@ -23,9 +23,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.redmuqui.platform.actividad.dto.CofinanciamientoSalienteDTO;
 import com.redmuqui.platform.actividad.dto.SubactividadArchivoResponseDTO;
 import com.redmuqui.platform.actividad.dto.SubactividadCofinanciamientoResponseDTO;
 import com.redmuqui.platform.actividad.dto.SubactividadResponseDTO;
+import com.redmuqui.platform.actividad.repository.SubactividadCofinanciamientoRepository;
 import com.redmuqui.platform.actividad.entity.Subactividad;
 import com.redmuqui.platform.proyecto.entity.Proyecto;
 
@@ -50,6 +52,7 @@ public class ActividadService {
     private final CronogramaService cronogramaService;
     private final ValidacionCronogramaService validacionCronogramaService;
     private final DocumentoRepository documentoRepository;
+    private final SubactividadCofinanciamientoRepository cofinanciamientoRepository;
 
     @Transactional(readOnly = true)
     public Page<ActividadResponseDTO> listar(Long proyectoId, Pageable pageable) {
@@ -319,6 +322,20 @@ public class ActividadService {
             a.getResponsables().stream().map(u -> u.getId()).collect(Collectors.toSet()),
             a.getSubactividades() == null ? List.of() : a.getSubactividades().stream()
                 .map(this::mapSubactividad)
+                .collect(Collectors.toList()),
+            cofinanciamientoRepository.findByActividadOrigen_Id(a.getId()).stream()
+                .map(c -> {
+                    var sub = c.getSubactividad();
+                    var proyectoDestino = sub.getActividad().getProyecto();
+                    return new CofinanciamientoSalienteDTO(
+                        sub.getId(),
+                        sub.getNombre(),
+                        proyectoDestino.getId(),
+                        proyectoDestino.getNombre(),
+                        c.getMonto(),
+                        c.getJustificacion()
+                    );
+                })
                 .collect(Collectors.toList())
         );
     }
