@@ -66,7 +66,7 @@ export DB_PORT=5432
 export DB_NAME=redmuqui_dev
 export DB_USER=redmuqui
 export DB_PASSWORD=redmuqui
-export JWT_SECRET=cambiar-este-secreto-en-produccion-debe-ser-largo-y-aleatorio-min-256-bits
+export JWT_SECRET=$(openssl rand -base64 32)
 ```
 
 ### Ejecutar
