@@ -11,6 +11,7 @@ public record IndicadoresDTO(
     long proyectosActivos,
     long proyectosEnRiesgo,
     double presupuestoTotal,
+    java.util.List<PresupuestoPorMonedaDTO> presupuestosPorMoneda,
     double avancePromedio,
     long beneficiariosHombres,
     long beneficiariosMujeres,

@@ -26,6 +26,15 @@ public interface ProyectoRepository extends JpaRepository<Proyecto, Long>, JpaSp
     @Query("SELECT COALESCE(SUM(p.presupuesto), 0) FROM Proyecto p WHERE p.estado = :estado")
     double sumPresupuestoByEstado(EstadoProyecto estado);
 
+    @Query("""
+        SELECT COALESCE(p.moneda, 'PEN'), COALESCE(SUM(p.presupuesto), 0), COUNT(p)
+        FROM Proyecto p
+        WHERE p.estado = :estado
+        GROUP BY COALESCE(p.moneda, 'PEN')
+        ORDER BY COALESCE(p.moneda, 'PEN')
+        """)
+    List<Object[]> sumPresupuestoPorMonedaByEstado(EstadoProyecto estado);
+
     @Query("SELECT COALESCE(AVG(p.porcentajeAvance), 0) FROM Proyecto p WHERE p.estado = :estado")
     double avgAvanceByEstado(EstadoProyecto estado);
 

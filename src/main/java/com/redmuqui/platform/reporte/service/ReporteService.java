@@ -18,6 +18,7 @@ import com.redmuqui.platform.reporte.dto.ConteoPresupuestoDTO;
 import com.redmuqui.platform.reporte.dto.DocumentoRecienteDTO;
 import com.redmuqui.platform.reporte.dto.IndicadoresDTO;
 import com.redmuqui.platform.reporte.dto.MacroregionResumenDTO;
+import com.redmuqui.platform.reporte.dto.PresupuestoPorMonedaDTO;
 import com.redmuqui.platform.reporte.dto.ProyectoAvanceDTO;
 import com.redmuqui.platform.reporte.dto.ProyectoRiesgoDTO;
 import com.redmuqui.platform.territorio.entity.TipoTerritorio;
@@ -35,6 +36,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -72,6 +74,7 @@ public class ReporteService {
                 proyectoRepository.countByEstado(EstadoProyecto.ACTIVO),
                 proyectosEnRiesgo().size(),
                 proyectoRepository.sumPresupuestoByEstado(EstadoProyecto.ACTIVO),
+                presupuestosPorMonedaActivos(),
                 proyectoRepository.avgAvanceByEstado(EstadoProyecto.ACTIVO),
                 subactividadRepository.sumHombresInvolucrados(),
                 subactividadRepository.sumMujeresInvolucradas(),
@@ -96,6 +99,7 @@ public class ReporteService {
             proyectosActivos.size(),
             proyectosEnRiesgo(anio).size(),
             presupuesto,
+            presupuestosPorMoneda(proyectosActivos),
             avancePromedio,
             subactividadRepository.sumHombresInvolucrados(),
             subactividadRepository.sumMujeresInvolucradas(),
@@ -104,6 +108,52 @@ public class ReporteService {
                 .filter(d -> d.getEstado() == EstadoDocumento.BORRADOR || d.getEstado() == EstadoDocumento.EN_REVISION)
                 .count()
         );
+    }
+
+    private List<PresupuestoPorMonedaDTO> presupuestosPorMonedaActivos() {
+        Map<String, PresupuestoMonedaAccumulator> resumen = new LinkedHashMap<>();
+        for (Object[] fila : proyectoRepository.sumPresupuestoPorMonedaByEstado(EstadoProyecto.ACTIVO)) {
+            String moneda = normalizarMoneda((String) fila[0]);
+            PresupuestoMonedaAccumulator acc = resumen.computeIfAbsent(
+                moneda,
+                key -> new PresupuestoMonedaAccumulator()
+            );
+            acc.monto += ((Number) fila[1]).doubleValue();
+            acc.proyectos += ((Number) fila[2]).longValue();
+        }
+        return resumen.entrySet().stream()
+            .sorted(Map.Entry.comparingByKey())
+            .map(entry -> new PresupuestoPorMonedaDTO(
+                entry.getKey(),
+                entry.getValue().monto,
+                entry.getValue().proyectos
+            ))
+            .toList();
+    }
+
+    private List<PresupuestoPorMonedaDTO> presupuestosPorMoneda(List<Proyecto> proyectos) {
+        Map<String, PresupuestoMonedaAccumulator> resumen = new LinkedHashMap<>();
+        for (Proyecto proyecto : proyectos) {
+            String moneda = normalizarMoneda(proyecto.getMoneda());
+            PresupuestoMonedaAccumulator acc = resumen.computeIfAbsent(
+                moneda,
+                key -> new PresupuestoMonedaAccumulator()
+            );
+            acc.monto += proyecto.getPresupuesto() == null ? 0.0 : proyecto.getPresupuesto();
+            acc.proyectos++;
+        }
+        return resumen.entrySet().stream()
+            .sorted(Map.Entry.comparingByKey())
+            .map(entry -> new PresupuestoPorMonedaDTO(
+                entry.getKey(),
+                entry.getValue().monto,
+                entry.getValue().proyectos
+            ))
+            .toList();
+    }
+
+    private String normalizarMoneda(String moneda) {
+        return moneda == null || moneda.isBlank() ? "PEN" : moneda.trim().toUpperCase(Locale.ROOT);
     }
 
     @Transactional(readOnly = true)
@@ -468,6 +518,11 @@ public class ReporteService {
     private static class ConteoPresupuestoAccumulator {
         long cantidad;
         double presupuesto;
+    }
+
+    private static class PresupuestoMonedaAccumulator {
+        double monto;
+        long proyectos;
     }
 
     private List<Proyecto> proyectosDelAnio(Integer anio) {
