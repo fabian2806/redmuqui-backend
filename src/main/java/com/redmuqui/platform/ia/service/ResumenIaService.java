@@ -9,6 +9,7 @@ import com.redmuqui.platform.actividad.repository.ActividadRepository;
 import com.redmuqui.platform.actividad.repository.HitoRepository;
 import com.redmuqui.platform.common.exception.ResourceNotFoundException;
 import com.redmuqui.platform.ia.client.LlmClient;
+import com.redmuqui.platform.ia.dto.MetricasResumen;
 import com.redmuqui.platform.ia.dto.ResumenIaResponse;
 import com.redmuqui.platform.proyecto.entity.Proyecto;
 import com.redmuqui.platform.proyecto.repository.ProyectoRepository;
@@ -52,10 +53,17 @@ public class ResumenIaService {
         Eres analista de la organización peruana Red Muqui. Redacta un RESUMEN EJECUTIVO del proyecto, \
         en español, dirigido a la dirección y a cooperantes/donantes. Reglas:
         - Usa EXCLUSIVAMENTE los datos de la ficha. No inventes cifras, nombres ni hechos; si un dato no aparece, no lo menciones.
-        - 1 o 2 párrafos, máximo ~140 palabras, en prosa continua (sin viñetas ni encabezados), tono profesional y claro.
-        - Destaca el avance, la ejecución presupuestal y los beneficiarios con enfoque de equidad de género (hombres y mujeres).
-        - Menciona los logros (hitos y actividades finalizados) y, si existen, las alertas de riesgo.
-        - No incluyas saludos ni despedidas: entrega solo el resumen.""";
+        - Estructura la respuesta en secciones breves. Cada sección empieza con su título en MAYÚSCULAS \
+        en su propia línea, en este orden (omite una sección solo si no hay datos para ella): \
+        PANORAMA GENERAL, EJECUCIÓN PRESUPUESTAL, BENEFICIARIOS, LOGROS, ALERTAS DE RIESGO.
+        - Cada sección: 1 a 3 frases en prosa continua, tono profesional y claro (sin viñetas dentro de las secciones).
+        - En BENEFICIARIOS destaca el enfoque de equidad de género (hombres y mujeres). En LOGROS menciona \
+        hitos y actividades finalizados. Incluye ALERTAS DE RIESGO solo si la ficha indica riesgo.
+        - Termina con una sección final titulada RECOMENDACIONES PARA LA DIRECCIÓN con 2 o 3 recomendaciones \
+        accionables, cada una en su propia línea comenzando con "- ". Las recomendaciones deben deducirse \
+        LÓGICAMENTE de los datos de la ficha (p.ej. hitos vencidos, ejecución presupuestal frente al avance, \
+        equidad de género); no introduzcas hechos ni cifras nuevas.
+        - No incluyas saludos, despedidas ni texto fuera de las secciones.""";
 
     private final ProyectoRepository proyectoRepository;
     private final ActividadRepository actividadRepository;
@@ -85,10 +93,19 @@ public class ResumenIaService {
     }
 
     private ResumenIaResponse respuesta(Ficha f, String resumen, boolean ia, String modelo, String aviso) {
+        // Las métricas salen de la misma ficha que alimenta el texto: los gráficos
+        // del frontend y la narrativa muestran siempre las mismas cifras.
+        MetricasResumen metricas = new MetricasResumen(
+            f.avance(), f.presupuesto(), f.presupuestoEjecutado(),
+            f.beneficiariosHombres(), f.beneficiariosMujeres(),
+            f.actFinalizadas(), f.actEnCurso(), f.actPendientes(), f.actVencidas(), f.totalActividades(),
+            f.totalHitos(), f.hitosFinalizados(), f.hitosVencidos(),
+            f.enRiesgo()
+        );
         return new ResumenIaResponse(
             f.id(), f.nombre(), f.codigoInterno(),
             resumen == null ? "" : resumen.strip(),
-            ia, modelo, aviso, LocalDateTime.now()
+            ia, modelo, aviso, LocalDateTime.now(), metricas
         );
     }
 

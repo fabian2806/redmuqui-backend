@@ -17,45 +17,49 @@ import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
- * Implementación de {@link LlmClient} sobre la API de Google Gemini
- * (endpoint {@code generateContent} de Generative Language).
+ * Implementación de {@link LlmClient} sobre la API de Anthropic (Claude),
+ * endpoint {@code /v1/messages} de la Messages API.
  *
- * <p>La API key se inyecta por variable de entorno ({@code GEMINI_API_KEY}) y
- * NUNCA se versiona, igual que {@code JWT_SECRET}. Si no hay key configurada,
- * {@link #estaConfigurado()} devuelve {@code false} y el servicio cae a un
- * resumen-plantilla en vez de fallar.</p>
+ * <p>Alternativa a {@link GeminiLlmClient}: se activa cuando
+ * {@code app.ia.provider=anthropic}. La lógica de negocio ({@code ResumenIaService})
+ * no cambia porque depende de la interfaz {@link LlmClient}, no del proveedor.</p>
  *
- * <p>Es el proveedor por defecto: se activa salvo que {@code app.ia.provider}
- * pida explícitamente otro (p.ej. {@code anthropic}). Así solo hay un bean
- * {@link LlmClient} en el contexto y no se produce ambigüedad de inyección.</p>
+ * <p>La API key se inyecta por entorno ({@code ANTHROPIC_API_KEY}) y NUNCA se
+ * versiona. Sin key configurada, {@link #estaConfigurado()} devuelve {@code false}
+ * y el servicio cae a un resumen-plantilla en vez de fallar.</p>
  */
 @Component
-@ConditionalOnProperty(name = "app.ia.provider", havingValue = "gemini", matchIfMissing = true)
-public class GeminiLlmClient implements LlmClient {
+@ConditionalOnProperty(name = "app.ia.provider", havingValue = "anthropic")
+public class AnthropicLlmClient implements LlmClient {
 
-    private static final Logger log = LoggerFactory.getLogger(GeminiLlmClient.class);
+    private static final Logger log = LoggerFactory.getLogger(AnthropicLlmClient.class);
 
     private final String apiKey;
     private final String modelo;
     private final String baseUrl;
+    private final String anthropicVersion;
+    private final int maxOutputTokens;
     private final int maxReintentos;
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public GeminiLlmClient(
-            @Value("${app.ia.api-key:}") String apiKey,
-            @Value("${app.ia.model:gemini-2.5-flash}") String modelo,
-            @Value("${app.ia.base-url:https://generativelanguage.googleapis.com/v1beta}") String baseUrl,
-            @Value("${app.ia.timeout-ms:30000}") int timeoutMs,
-            @Value("${app.ia.max-reintentos:2}") int maxReintentos) {
+    public AnthropicLlmClient(
+            @Value("${app.ia.anthropic.api-key:}") String apiKey,
+            @Value("${app.ia.anthropic.model:claude-sonnet-4-6}") String modelo,
+            @Value("${app.ia.anthropic.base-url:https://api.anthropic.com/v1}") String baseUrl,
+            @Value("${app.ia.anthropic.version:2023-06-01}") String anthropicVersion,
+            @Value("${app.ia.anthropic.max-tokens:2048}") int maxOutputTokens,
+            @Value("${app.ia.anthropic.timeout-ms:30000}") int timeoutMs,
+            @Value("${app.ia.anthropic.max-reintentos:2}") int maxReintentos) {
         this.apiKey = apiKey == null ? "" : apiKey.trim();
         this.modelo = modelo;
         this.baseUrl = baseUrl;
+        this.anthropicVersion = anthropicVersion;
+        this.maxOutputTokens = maxOutputTokens;
         this.maxReintentos = Math.max(0, maxReintentos);
 
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
@@ -67,7 +71,7 @@ public class GeminiLlmClient implements LlmClient {
     /** Deja constancia en el log de arranque de si la IA quedó configurada (sin exponer la key). */
     @PostConstruct
     void logEstado() {
-        log.info("Resumen IA — proveedor Gemini configurado: {} (modelo={}, longitud de la key={})",
+        log.info("Resumen IA — proveedor Anthropic configurado: {} (modelo={}, longitud de la key={})",
             estaConfigurado(), modelo, apiKey.length());
     }
 
@@ -83,34 +87,28 @@ public class GeminiLlmClient implements LlmClient {
 
     @Override
     public String generar(String instruccionSistema, String prompt) {
-        // La key viaja en cabecera (x-goog-api-key), no en la URL, para no filtrarla en logs.
-        String url = baseUrl + "/models/" + modelo + ":generateContent";
+        String url = baseUrl + "/messages";
 
-        Map<String, Object> generationConfig = new HashMap<>();
-        generationConfig.put("temperature", 0.4);
-        generationConfig.put("maxOutputTokens", 2048);
-        if (modelo.contains("2.5")) {
-            // Los modelos Gemini 2.5 "piensan", y ese razonamiento consume maxOutputTokens,
-            // lo que truncaba el resumen a media frase. Para un resumen corto no hace falta:
-            // lo desactivamos (thinkingBudget=0) para que todo el presupuesto sea la respuesta.
-            generationConfig.put("thinkingConfig", Map.of("thinkingBudget", 0));
-        }
-
+        // Messages API: la instrucción de sistema va en "system"; la ficha en un turno de usuario.
         Map<String, Object> body = Map.of(
-            "contents", List.of(Map.of(
-                "parts", List.of(Map.of("text", instruccionSistema + "\n\n" + prompt))
-            )),
-            "generationConfig", generationConfig
+            "model", modelo,
+            "max_tokens", maxOutputTokens,
+            "system", instruccionSistema,
+            "messages", List.of(Map.of(
+                "role", "user",
+                "content", prompt
+            ))
         );
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set("x-goog-api-key", apiKey);
+        headers.set("x-api-key", apiKey);
+        headers.set("anthropic-version", anthropicVersion);
         HttpEntity<Map<String, Object>> peticion = new HttpEntity<>(body, headers);
 
-        // Reintenta ante errores transitorios (5xx como el 503 "high demand", o cortes
-        // de red). Los 4xx (p.ej. 429 por cuota) NO se reintentan: el servicio cae a la
-        // plantilla, que es la respuesta correcta para esos casos.
+        // Reintenta ante errores transitorios (5xx, incluido el 529 "overloaded", o cortes de
+        // red). Los 4xx (p.ej. 429 por cuota, 401 por key inválida) NO se reintentan: el
+        // servicio cae a la plantilla, que es la respuesta correcta para esos casos.
         RuntimeException ultimoError = null;
         for (int intento = 0; intento <= maxReintentos; intento++) {
             try {
@@ -119,7 +117,7 @@ public class GeminiLlmClient implements LlmClient {
                 return extraerTexto(respuesta.getBody());
             } catch (HttpServerErrorException | ResourceAccessException e) {
                 ultimoError = e;
-                log.warn("Gemini no disponible (intento {}/{}): {}",
+                log.warn("Anthropic no disponible (intento {}/{}): {}",
                     intento + 1, maxReintentos + 1, e.getMessage());
                 if (intento < maxReintentos) {
                     dormir(1200L * (intento + 1));
@@ -138,23 +136,25 @@ public class GeminiLlmClient implements LlmClient {
         }
     }
 
-    /** Extrae {@code candidates[0].content.parts[*].text} de la respuesta de Gemini. */
+    /** Extrae y concatena los bloques de texto de {@code content[*].text} de la respuesta de Claude. */
     private String extraerTexto(String json) {
         try {
             JsonNode raiz = objectMapper.readTree(json);
-            JsonNode partes = raiz.path("candidates").path(0).path("content").path("parts");
+            JsonNode contenido = raiz.path("content");
             StringBuilder sb = new StringBuilder();
-            for (JsonNode parte : partes) {
-                sb.append(parte.path("text").asText(""));
+            for (JsonNode bloque : contenido) {
+                if ("text".equals(bloque.path("type").asText())) {
+                    sb.append(bloque.path("text").asText(""));
+                }
             }
             String texto = sb.toString().trim();
             if (texto.isEmpty()) {
-                throw new IllegalStateException("Gemini devolvió una respuesta sin texto");
+                throw new IllegalStateException("Anthropic devolvió una respuesta sin texto");
             }
             return texto;
         } catch (Exception e) {
-            log.warn("Respuesta de Gemini no interpretable: {}", e.getMessage());
-            throw new RuntimeException("No se pudo interpretar la respuesta de Gemini", e);
+            log.warn("Respuesta de Anthropic no interpretable: {}", e.getMessage());
+            throw new RuntimeException("No se pudo interpretar la respuesta de Anthropic", e);
         }
     }
 }
