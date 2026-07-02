@@ -1,33 +1,38 @@
-package com.redmuqui.platform.common.catalog.entity;
+package com.redmuqui.platform.moneda.entity;
 
 import com.redmuqui.platform.common.audit.Auditable;
 import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.MappedSuperclass;
+import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-@MappedSuperclass
+@Entity
+@Table(name = "monedas")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public abstract class BaseCatalogo extends Auditable {
+public class Moneda extends Auditable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    protected Long id;
+    private Long id;
 
     @Column(nullable = false, unique = true, length = 200)
-    protected String nombre;
+    private String nombre;
 
-    @Column(columnDefinition = "TEXT")
-    protected String descripcion;
+    @Column(nullable = false, unique = true, length = 3)
+    private String codigo;
+
+    @Column(nullable = false, length = 10)
+    private String simbolo;
 
     @Column(nullable = false)
-    protected Boolean activo = true;
+    private Boolean activo = true;
 }

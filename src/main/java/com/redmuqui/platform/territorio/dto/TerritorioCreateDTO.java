@@ -14,4 +14,6 @@ public class TerritorioCreateDTO {
     @NotBlank
     @Size(max = 10000)
     private String descripcion;
+
+    private Boolean activo;
 }

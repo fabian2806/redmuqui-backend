@@ -100,7 +100,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponse> handleDataIntegrity(DataIntegrityViolationException ex, HttpServletRequest request) {
         log.warn("Violación de integridad de datos: {}", ex.getMostSpecificCause().getMessage());
-        return build(HttpStatus.CONFLICT, "Violación de integridad de datos", request);
+        return build(HttpStatus.CONFLICT, "No se puede eliminar el registro porque está siendo utilizado por otros módulos", request);
     }
 
     @ExceptionHandler(Exception.class)

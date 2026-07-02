@@ -1,11 +1,11 @@
-package com.redmuqui.platform.institucion.dto;
+package com.redmuqui.platform.moneda.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
-public record InstitucionUpdateDTO(
+public record MonedaCreateDTO(
     @NotBlank @Size(max = 200) String nombre,
-    String descripcion,
-    @Size(max = 100) String tipo,
+    @NotBlank @Size(max = 3) String codigo,
+    @NotBlank @Size(max = 10) String simbolo,
     Boolean activo
 ) {}

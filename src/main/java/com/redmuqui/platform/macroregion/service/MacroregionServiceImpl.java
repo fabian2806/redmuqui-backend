@@ -24,7 +24,8 @@ public class MacroregionServiceImpl extends BaseCatalogoService<Macroregion, Mac
         return new MacroregionResponseDTO(
             entity.getId(),
             entity.getNombre(),
-            entity.getDescripcion()
+            entity.getDescripcion(),
+            entity.getActivo()
         );
     }
 
@@ -34,6 +35,7 @@ public class MacroregionServiceImpl extends BaseCatalogoService<Macroregion, Mac
         entity.setId(dto.id());
         entity.setNombre(dto.nombre());
         entity.setDescripcion(dto.descripcion());
+        entity.setActivo(dto.activo() != null ? dto.activo() : true);
         return entity;
     }
 
@@ -50,6 +52,7 @@ public class MacroregionServiceImpl extends BaseCatalogoService<Macroregion, Mac
         Macroregion entity = new Macroregion();
         entity.setNombre(dto.nombre());
         entity.setDescripcion(dto.descripcion());
+        entity.setActivo(dto.activo() != null ? dto.activo() : true);
         return toDTO(repository.save(entity));
     }
 
@@ -58,6 +61,7 @@ public class MacroregionServiceImpl extends BaseCatalogoService<Macroregion, Mac
         Macroregion entity = buscarOFallar(id);
         entity.setNombre(dto.nombre());
         entity.setDescripcion(dto.descripcion());
+        entity.setActivo(dto.activo() != null ? dto.activo() : true);
         return toDTO(entity);
     }
 }

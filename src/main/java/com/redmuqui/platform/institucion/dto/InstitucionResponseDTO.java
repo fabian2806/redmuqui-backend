@@ -7,5 +7,6 @@ public record InstitucionResponseDTO(
     Long id,
     String nombre,
     String descripcion,
-    @Size(max = 100) String tipo
+    @Size(max = 100) String tipo,
+    Boolean activo
 ) implements BaseCatalogoDTO {}

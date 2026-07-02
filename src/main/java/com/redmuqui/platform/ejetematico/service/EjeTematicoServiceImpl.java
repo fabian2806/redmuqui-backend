@@ -25,7 +25,8 @@ public class EjeTematicoServiceImpl extends BaseCatalogoService<EjeTematico, Eje
         return new EjeTematicoResponseDTO(
             entity.getId(),
             entity.getNombre(),
-            entity.getDescripcion()
+            entity.getDescripcion(),
+            entity.getActivo()
         );
     }
 
@@ -35,6 +36,7 @@ public class EjeTematicoServiceImpl extends BaseCatalogoService<EjeTematico, Eje
         entity.setId(dto.id());
         entity.setNombre(dto.nombre());
         entity.setDescripcion(dto.descripcion());
+        entity.setActivo(dto.activo() != null ? dto.activo() : true);
         return entity;
     }
 
@@ -51,6 +53,7 @@ public class EjeTematicoServiceImpl extends BaseCatalogoService<EjeTematico, Eje
         EjeTematico entity = new EjeTematico();
         entity.setNombre(dto.nombre());
         entity.setDescripcion(dto.descripcion());
+        entity.setActivo(dto.activo() != null ? dto.activo() : true);
         return toDTO(repository.save(entity));
     }
 
@@ -59,6 +62,7 @@ public class EjeTematicoServiceImpl extends BaseCatalogoService<EjeTematico, Eje
         EjeTematico entity = buscarOFallar(id);
         entity.setNombre(dto.nombre());
         entity.setDescripcion(dto.descripcion());
+        entity.setActivo(dto.activo() != null ? dto.activo() : true);
         return toDTO(entity);
     }
 }
