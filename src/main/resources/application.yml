@@ -88,6 +88,10 @@ app:
   s3:
     bucket-name: ${S3_BUCKET:redmuqui-files-2026}
   ia:
+    # Proveedor de IA activo: "gemini" (por defecto) o "anthropic" (Claude).
+    # Cambiar con IA_PROVIDER=anthropic. Solo se instancia el cliente elegido,
+    # así no hay ambigüedad de beans LlmClient.
+    provider: ${IA_PROVIDER:gemini}
     # Resumen Ejecutivo con IA (Sprint 4 ⑤). La API key NUNCA se versiona: se inyecta
     # por entorno, igual que JWT_SECRET. Sin GEMINI_API_KEY el endpoint devuelve un
     # resumen-plantilla (generadoPorIa=false) en vez de fallar.
@@ -97,6 +101,17 @@ app:
     timeout-ms: ${GEMINI_TIMEOUT_MS:30000}
     # Reintentos ante errores transitorios de Gemini (503 "high demand", red). No aplica a 429.
     max-reintentos: ${GEMINI_MAX_REINTENTOS:2}
+    # Proveedor alternativo Claude (Anthropic). Se usa solo con IA_PROVIDER=anthropic.
+    # La key (ANTHROPIC_API_KEY) NUNCA se versiona. Sin key, cae a la plantilla.
+    anthropic:
+      api-key: ${ANTHROPIC_API_KEY:}
+      model: ${ANTHROPIC_MODEL:claude-sonnet-4-6}
+      base-url: ${ANTHROPIC_BASE_URL:https://api.anthropic.com/v1}
+      version: ${ANTHROPIC_VERSION:2023-06-01}
+      max-tokens: ${ANTHROPIC_MAX_TOKENS:2048}
+      timeout-ms: ${ANTHROPIC_TIMEOUT_MS:30000}
+      # Reintentos ante errores transitorios (5xx, 529 "overloaded", red). No aplica a 429/401.
+      max-reintentos: ${ANTHROPIC_MAX_REINTENTOS:2}
   swagger:
     enabled: ${SWAGGER_ENABLED:false}
 

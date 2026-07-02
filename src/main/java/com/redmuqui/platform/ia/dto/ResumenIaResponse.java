@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
  * @param modelo        modelo usado (p.ej. {@code gemini-2.0-flash}) o {@code plantilla-local}
  * @param aviso         mensaje opcional para el usuario (p.ej. por qué se usó la plantilla); {@code null} si no aplica
  * @param generadoEn    momento de generación
+ * @param metricas      cifras del proyecto (avance, presupuesto, beneficiarios, actividades, hitos) para graficar
  */
 public record ResumenIaResponse(
     Long idProyecto,
@@ -22,5 +23,6 @@ public record ResumenIaResponse(
     boolean generadoPorIa,
     String modelo,
     String aviso,
-    LocalDateTime generadoEn
+    LocalDateTime generadoEn,
+    MetricasResumen metricas
 ) {}
