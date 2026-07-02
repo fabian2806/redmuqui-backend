@@ -5,6 +5,8 @@ import com.redmuqui.platform.common.catalog.entity.BaseCatalogo;
 import com.redmuqui.platform.common.catalog.repository.BaseCatalogoRepository;
 import com.redmuqui.platform.common.exception.DuplicateResourceException;
 import com.redmuqui.platform.common.exception.ResourceNotFoundException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -29,6 +31,11 @@ public abstract class BaseCatalogoService<T extends BaseCatalogo, D extends Base
     }
 
     @Transactional(readOnly = true)
+    public Page<D> listarPaginado(Pageable pageable) {
+        return repository.findAll(pageable).map(this::toDTO);
+    }
+
+    @Transactional(readOnly = true)
     public D obtener(Long id) {
         return toDTO(buscarOFallar(id));
     }
@@ -38,7 +45,9 @@ public abstract class BaseCatalogoService<T extends BaseCatalogo, D extends Base
         if (repository.existsByNombreIgnoreCase(dto.nombre())) {
             throw new DuplicateResourceException("Ya existe " + getNombreEntidad() + " con el nombre: " + dto.nombre());
         }
-        return toDTO(repository.save(fromDTO(dto)));
+        T entity = fromDTO(dto);
+        entity.setActivo(dto.activo() != null ? dto.activo() : true);
+        return toDTO(repository.save(entity));
     }
 
     @Transactional
@@ -46,6 +55,7 @@ public abstract class BaseCatalogoService<T extends BaseCatalogo, D extends Base
         T entity = buscarOFallar(id);
         entity.setNombre(dto.nombre());
         entity.setDescripcion(dto.descripcion());
+        entity.setActivo(dto.activo() != null ? dto.activo() : true);
         return toDTO(entity);
     }
 

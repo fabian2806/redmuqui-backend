@@ -6,5 +6,6 @@ import jakarta.validation.constraints.Size;
 public record InstitucionCreateDTO(
     @NotBlank @Size(max = 200) String nombre,
     String descripcion,
-    @Size(max = 100) String tipo
+    @Size(max = 100) String tipo,
+    Boolean activo
 ) {}

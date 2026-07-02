@@ -9,6 +9,7 @@ public class TerritorioResponseDTO implements BaseCatalogoDTO {
     private Long id;
     private String nombre;
     private String descripcion;
+    private Boolean activo;
 
     @Override
     public Long id() {
@@ -23,5 +24,10 @@ public class TerritorioResponseDTO implements BaseCatalogoDTO {
     @Override
     public String descripcion() {
         return descripcion;
+    }
+
+    @Override
+    public Boolean activo() {
+        return activo;
     }
 }

@@ -5,5 +5,6 @@ import jakarta.validation.constraints.Size;
 
 public record EjeTematicoUpdateDTO(
     @NotBlank @Size(max = 200) String nombre,
-    String descripcion
+    String descripcion,
+    Boolean activo
 ) {}

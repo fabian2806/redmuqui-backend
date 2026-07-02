@@ -7,4 +7,5 @@ public interface BaseCatalogoDTO {
     Long id();
     @NotBlank @Size(max = 200) String nombre();
     String descripcion();
+    Boolean activo();
 }

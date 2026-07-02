@@ -26,6 +26,7 @@ public class TerritorioServiceImpl extends BaseCatalogoService<Territorio, Terri
         dto.setId(entity.getId());
         dto.setNombre(entity.getNombre());
         dto.setDescripcion(entity.getDescripcion());
+        dto.setActivo(entity.getActivo());
         return dto;
     }
 
@@ -35,6 +36,7 @@ public class TerritorioServiceImpl extends BaseCatalogoService<Territorio, Terri
         entity.setId(dto.id());
         entity.setNombre(dto.nombre());
         entity.setDescripcion(dto.descripcion());
+        entity.setActivo(dto.activo() != null ? dto.activo() : true);
         return entity;
     }
 
@@ -51,6 +53,7 @@ public class TerritorioServiceImpl extends BaseCatalogoService<Territorio, Terri
         Territorio entity = new Territorio();
         entity.setNombre(dto.getNombre());
         entity.setDescripcion(dto.getDescripcion());
+        entity.setActivo(dto.getActivo() != null ? dto.getActivo() : true);
         return toDTO(repository.save(entity));
     }
 
@@ -59,6 +62,7 @@ public class TerritorioServiceImpl extends BaseCatalogoService<Territorio, Terri
         Territorio entity = buscarOFallar(id);
         entity.setNombre(dto.getNombre());
         entity.setDescripcion(dto.getDescripcion());
+        entity.setActivo(dto.getActivo() != null ? dto.getActivo() : true);
         return toDTO(entity);
     }
 }

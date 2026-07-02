@@ -26,7 +26,8 @@ public class InstitucionServiceImpl extends BaseCatalogoService<Institucion, Ins
             entity.getId(),
             entity.getNombre(),
             entity.getDescripcion(),
-            entity.getTipo()
+            entity.getTipo(),
+            entity.getActivo()
         );
     }
 
@@ -37,6 +38,7 @@ public class InstitucionServiceImpl extends BaseCatalogoService<Institucion, Ins
         entity.setNombre(dto.nombre());
         entity.setDescripcion(dto.descripcion());
         entity.setTipo(dto.tipo());
+        entity.setActivo(dto.activo() != null ? dto.activo() : true);
         return entity;
     }
 
@@ -45,13 +47,14 @@ public class InstitucionServiceImpl extends BaseCatalogoService<Institucion, Ins
         return "Institucion";
     }
 
-    // Override base actualizar to also persist the tipo field
+    // Override base actualizar to also persist the tipo and activo fields
     @Override
     public InstitucionResponseDTO actualizar(Long id, InstitucionResponseDTO dto) {
         Institucion entity = buscarOFallar(id);
         entity.setNombre(dto.nombre());
         entity.setDescripcion(dto.descripcion());
         entity.setTipo(dto.tipo());
+        entity.setActivo(dto.activo() != null ? dto.activo() : true);
         return toDTO(entity);
     }
 
@@ -64,6 +67,7 @@ public class InstitucionServiceImpl extends BaseCatalogoService<Institucion, Ins
         entity.setNombre(dto.nombre());
         entity.setDescripcion(dto.descripcion());
         entity.setTipo(dto.tipo());
+        entity.setActivo(dto.activo() != null ? dto.activo() : true);
         return toDTO(repository.save(entity));
     }
 
@@ -73,6 +77,7 @@ public class InstitucionServiceImpl extends BaseCatalogoService<Institucion, Ins
         entity.setNombre(dto.nombre());
         entity.setDescripcion(dto.descripcion());
         entity.setTipo(dto.tipo());
+        entity.setActivo(dto.activo() != null ? dto.activo() : true);
         return toDTO(entity);
     }
 }

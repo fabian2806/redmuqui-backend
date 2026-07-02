@@ -3,6 +3,8 @@ package com.redmuqui.platform.common.catalog.controller;
 import com.redmuqui.platform.common.catalog.dto.BaseCatalogoDTO;
 import com.redmuqui.platform.common.catalog.service.BaseCatalogoService;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -29,6 +31,12 @@ public abstract class BaseCatalogoController<D extends BaseCatalogoDTO> {
     @PreAuthorize("hasAuthority('CATALOGOS_READ')")
     public ResponseEntity<List<D>> listar() {
         return ResponseEntity.ok(service.listar());
+    }
+
+    @GetMapping("/page")
+    @PreAuthorize("hasAuthority('CATALOGOS_READ')")
+    public ResponseEntity<Page<D>> listarPaginado(Pageable pageable) {
+        return ResponseEntity.ok(service.listarPaginado(pageable));
     }
 
     @GetMapping("/{id}")
